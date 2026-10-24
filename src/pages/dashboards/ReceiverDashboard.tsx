@@ -16,6 +16,7 @@ import { Dispatch } from '../../types/dispatch.js';
 import { api } from '../../services/api.js';
 import { StatusBadge } from '../../components/common/StatusBadge.js';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner.js';
+import { ProfileSummaryCard } from '../../components/common/ProfileSummaryCard.js';
 
 interface ReceiverDashboardProps {
   onSelectDispatch: (id: string) => void;
@@ -50,6 +51,9 @@ export const ReceiverDashboard: React.FC<ReceiverDashboardProps> = ({ onSelectDi
 
   return (
     <div className="space-y-6">
+      {/* Profile Summary Card */}
+      <ProfileSummaryCard />
+
       {/* Receiving Portal Header */}
       <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-sm">
         <div className="flex items-center gap-2 mb-1">

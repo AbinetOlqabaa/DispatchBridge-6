@@ -17,6 +17,7 @@ import { Dispatch } from '../../types/dispatch.js';
 import { api } from '../../services/api.js';
 import { StatusBadge } from '../../components/common/StatusBadge.js';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner.js';
+import { ProfileSummaryCard } from '../../components/common/ProfileSummaryCard.js';
 
 interface SenderDashboardProps {
   onSelectDispatch: (id: string) => void;
@@ -72,6 +73,9 @@ export const SenderDashboard: React.FC<SenderDashboardProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Profile Summary Card */}
+      <ProfileSummaryCard />
+
       {/* Sender Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-sm">
         <div>

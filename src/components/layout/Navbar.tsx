@@ -36,6 +36,7 @@ interface NavbarProps {
   onSelectTab: (tab: string) => void;
   onOpenAuth: () => void;
   onOpenNotifications: () => void;
+  onOpenProfile?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -43,6 +44,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSelectTab,
   onOpenAuth,
   onOpenNotifications,
+  onOpenProfile,
 }) => {
   const { user, logout, quickLoginDemoRole, unreadNotifsCount } = useAuth();
   const { themeMode, setThemeMode, effectiveTheme } = useTheme();
@@ -366,12 +368,28 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {user ? (
               <div className="flex items-center gap-1.5 xl:gap-2 pl-2 border-l border-slate-800">
-                <div className="text-right hidden sm:block">
-                  <div className="text-xs font-semibold text-slate-200 truncate max-w-[85px] xl:max-w-[130px]">{user.name}</div>
-                  <div className="flex items-center justify-end gap-1 mt-0.5">
-                    {getRoleBadge(user.role)}
+                <button
+                  onClick={onOpenProfile}
+                  className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-800/80 transition-colors cursor-pointer group text-left"
+                  title="View / Edit Profile"
+                  aria-label="View or edit profile"
+                >
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xs font-bold text-indigo-400">
+                        {user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                      </span>
+                    )}
                   </div>
-                </div>
+                  <div className="text-left hidden sm:block">
+                    <div className="text-xs font-semibold text-slate-200 group-hover:text-indigo-300 transition-colors truncate max-w-[85px] xl:max-w-[130px]">{user.name}</div>
+                    <div className="flex items-center justify-start gap-1 mt-0.5">
+                      {getRoleBadge(user.role)}
+                    </div>
+                  </div>
+                </button>
                 <button
                   onClick={logout}
                   className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800/80 transition-colors cursor-pointer min-w-[34px] min-h-[34px] flex items-center justify-center"
@@ -475,17 +493,34 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {user ? (
             <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/80 flex items-center justify-between">
-              <div>
-                <div className="text-sm font-bold text-white">{user.name}</div>
-                <div className="text-xs text-slate-400">{user.businessName}</div>
-                <div className="mt-1">{getRoleBadge(user.role)}</div>
-              </div>
+              <button
+                onClick={() => {
+                  onOpenProfile?.();
+                  setMobileMenuOpen(false);
+                }}
+                className="flex items-center gap-2.5 text-left cursor-pointer group flex-1 mr-2"
+              >
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-700 border border-slate-600 flex items-center justify-center shrink-0">
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-sm font-bold text-indigo-400">
+                      {user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors">{user.name}</div>
+                  <div className="text-xs text-slate-400">{user.businessName}</div>
+                  <div className="mt-1">{getRoleBadge(user.role)}</div>
+                </div>
+              </button>
               <button
                 onClick={() => {
                   logout();
                   setMobileMenuOpen(false);
                 }}
-                className="p-2 rounded-lg bg-slate-700 text-rose-300 hover:bg-slate-600"
+                className="p-2 rounded-lg bg-slate-700 text-rose-300 hover:bg-slate-600 shrink-0"
                 aria-label="Sign Out"
               >
                 <LogOut className="w-4 h-4" />
