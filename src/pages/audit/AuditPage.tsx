@@ -10,12 +10,14 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.js';
+import { useTranslation } from '../../context/LanguageContext.js';
 import { AuditLogEntry } from '../../types/dispatch.js';
 import { api } from '../../services/api.js';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner.js';
 
 export const AuditPage: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -96,13 +98,13 @@ export const AuditPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-purple-400 bg-purple-950 px-2.5 py-0.5 rounded-full border border-purple-800">
-              Audit & Compliance
+              {t('nav.audit', 'Audit & Compliance')}
             </span>
             <span className="text-xs text-slate-400">Append-Only Immutable Ledger</span>
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Tamper-Resistant Audit Trail</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">{t('audit.title', 'Tamper-Resistant Audit Trail')}</h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Full event history recording dispatch creations, view receipts, dock reconciliations, and logins.
+            {t('audit.subtitle', 'Full event history recording dispatch creations, view receipts, dock reconciliations, and logins.')}
           </p>
         </div>
 
@@ -111,12 +113,12 @@ export const AuditPage: React.FC = () => {
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium cursor-pointer transition-colors"
         >
           <RefreshCw className="w-3.5 h-3.5" />
-          <span>Refresh Ledger</span>
+          <span>{t('system.rescan', 'Refresh Ledger')}</span>
         </button>
       </div>
 
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-        {/* Multi-Dimensional Filter Suite (Requirement 6) */}
+        {/* Multi-Dimensional Filter Suite */}
         <div className="space-y-3 pb-3 border-b border-slate-800/80">
           <div className="flex flex-col md:flex-row items-center gap-3">
             {/* Search Input */}
@@ -126,7 +128,7 @@ export const AuditPage: React.FC = () => {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search audit descriptions, entity IDs, or actors..."
+                placeholder={t('audit.search_placeholder', 'Search audit descriptions, entity IDs, or actors...')}
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
               />
             </div>
@@ -137,9 +139,9 @@ export const AuditPage: React.FC = () => {
                 value={actionFilter}
                 onChange={(e) => setActionFilter(e.target.value)}
                 className="w-full md:w-auto bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
-                title="Filter by event action type"
+                title={t('audit.filter_action', 'Filter by event action type')}
               >
-                <option value="ALL">All Event Types</option>
+                <option value="ALL">{t('admin.filter_role', 'All Event Types')}</option>
                 <option value="DISPATCH_CREATED">Dispatch Created</option>
                 <option value="DISPATCH_VIEWED">Dispatch Viewed</option>
                 <option value="RECEIPT_RECORDED">Receipt Recorded</option>
@@ -149,15 +151,15 @@ export const AuditPage: React.FC = () => {
               </select>
             </div>
 
-            {/* Actor Filter (Requirement 6) */}
+            {/* Actor Filter */}
             <div className="w-full md:w-auto">
               <select
                 value={actorFilter}
                 onChange={(e) => setActorFilter(e.target.value)}
                 className="w-full md:w-auto bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
-                title="Filter by actor"
+                title={t('audit.filter_actor', 'Filter by actor')}
               >
-                <option value="ALL">All Actors</option>
+                <option value="ALL">{t('audit.filter_actor', 'All Actors')}</option>
                 {uniqueActors.map((act) => (
                   <option key={act} value={act}>
                     {act}
@@ -197,13 +199,13 @@ export const AuditPage: React.FC = () => {
                   onClick={handleResetFilters}
                   className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-medium transition-colors cursor-pointer border border-slate-700"
                 >
-                  Clear Filters
+                  {t('audit.reset_filters', 'Clear Filters')}
                 </button>
               )}
             </div>
 
             <div className="text-[11px] text-slate-400">
-              Showing <span className="font-semibold text-slate-200">{filteredLogs.length}</span> of {logs.length} audit entries
+              {t('dispatch.showing_count', 'Showing')} <span className="font-semibold text-slate-200">{filteredLogs.length}</span> {t('dispatch.of_total', 'of')} {logs.length}
             </div>
           </div>
         </div>
@@ -212,11 +214,11 @@ export const AuditPage: React.FC = () => {
           <table className="w-full text-left text-xs min-w-[820px] lg:min-w-full">
             <thead className="text-[11px] uppercase tracking-wider text-slate-400 bg-slate-950/40 border-b border-slate-800">
               <tr>
-                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">Event Timestamp</th>
-                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">Actor & Role</th>
-                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">Action</th>
-                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap min-w-[120px]">Entity</th>
-                <th className="px-3 sm:px-3.5 py-3 font-semibold min-w-[220px]">Audit Record Summary</th>
+                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">{t('audit.table_time', 'Event Timestamp')}</th>
+                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">{t('audit.table_actor', 'Actor & Role')}</th>
+                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">{t('audit.table_action', 'Action')}</th>
+                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap min-w-[120px]">{t('audit.table_entity', 'Entity')}</th>
+                <th className="px-3 sm:px-3.5 py-3 font-semibold min-w-[220px]">{t('audit.table_details', 'Audit Record Summary')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">

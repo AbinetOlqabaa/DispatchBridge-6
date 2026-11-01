@@ -16,12 +16,14 @@ import {
   Tooltip,
 } from 'recharts';
 import { Dispatch } from '../../types/dispatch.js';
+import { useTranslation } from '../../context/LanguageContext.js';
 
 interface DispatchSummaryCardsProps {
   dispatches: Dispatch[];
 }
 
 export const DispatchSummaryCards: React.FC<DispatchSummaryCardsProps> = ({ dispatches }) => {
+  const { t } = useTranslation();
   // 1. Pending Deliveries (IN_TRANSIT, DISPATCHED, VIEWED, SUBMITTED)
   const pendingDispatches = dispatches.filter((d) =>
     ['IN_TRANSIT', 'DISPATCHED', 'VIEWED', 'SUBMITTED'].includes(d.status)
@@ -85,12 +87,12 @@ export const DispatchSummaryCards: React.FC<DispatchSummaryCardsProps> = ({ disp
                 <Truck className="w-4 h-4" />
               </div>
               <div>
-                <span className="text-xs font-medium text-slate-400">Shipments Status</span>
-                <h3 className="text-sm font-bold text-white">Pending Deliveries</h3>
+                <span className="text-xs font-medium text-slate-400">{t('metric.recent_dispatches', 'Shipments Status')}</span>
+                <h3 className="text-sm font-bold text-white">{t('metric.pending_deliveries', 'Pending Deliveries')}</h3>
               </div>
             </div>
             <span className="flex items-center gap-1 text-[11px] font-semibold text-sky-400 bg-sky-950/60 border border-sky-800 px-2 py-0.5 rounded-full">
-              <Clock className="w-3 h-3" /> Active
+              <Clock className="w-3 h-3" /> {t('common.active', 'Active')}
             </span>
           </div>
 
@@ -98,10 +100,10 @@ export const DispatchSummaryCards: React.FC<DispatchSummaryCardsProps> = ({ disp
             <div className="text-xl sm:text-2xl font-extrabold text-white font-mono">
               {pendingCount}{' '}
               <span className="text-xs font-normal text-slate-400 font-sans">
-                manifests
+                {t('dispatch.dispatches_text', 'manifests')}
               </span>
             </div>
-            <div className="text-[11px] text-slate-400">7-day volume trend</div>
+            <div className="text-[11px] text-slate-400">{t('metric.lead_times', '7-day volume trend')}</div>
           </div>
         </div>
 
@@ -147,12 +149,12 @@ export const DispatchSummaryCards: React.FC<DispatchSummaryCardsProps> = ({ disp
                 <DollarSign className="w-4 h-4" />
               </div>
               <div>
-                <span className="text-xs font-medium text-slate-400">Cargo Exposure</span>
-                <h3 className="text-sm font-bold text-white">Total Value in Transit</h3>
+                <span className="text-xs font-medium text-slate-400">{t('table.reconciliation_outcome', 'Cargo Exposure')}</span>
+                <h3 className="text-sm font-bold text-white">{t('metric.total_value_transit', 'Total Value in Transit')}</h3>
               </div>
             </div>
             <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded-full">
-              <ArrowUpRight className="w-3 h-3" /> Insured
+              <ArrowUpRight className="w-3 h-3" /> {t('common.verified', 'Insured')}
             </span>
           </div>
 
@@ -160,7 +162,7 @@ export const DispatchSummaryCards: React.FC<DispatchSummaryCardsProps> = ({ disp
             <div className="text-xl sm:text-2xl font-extrabold text-emerald-400 font-mono tracking-tight">
               ${totalValueInTransit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
-            <div className="text-[11px] text-slate-400">Waybill valuation</div>
+            <div className="text-[11px] text-slate-400">{t('metric.waybill_valuation', 'Waybill valuation')}</div>
           </div>
         </div>
 
@@ -193,12 +195,12 @@ export const DispatchSummaryCards: React.FC<DispatchSummaryCardsProps> = ({ disp
                 <CheckCircle2 className="w-4 h-4" />
               </div>
               <div>
-                <span className="text-xs font-medium text-slate-400">Reconciliation Cycle</span>
-                <h3 className="text-sm font-bold text-white">Completed Today</h3>
+                <span className="text-xs font-medium text-slate-400">{t('table.reconciliation_outcome', 'Reconciliation Cycle')}</span>
+                <h3 className="text-sm font-bold text-white">{t('metric.completed_today', 'Completed Today')}</h3>
               </div>
             </div>
             <span className="flex items-center gap-1 text-[11px] font-semibold text-purple-400 bg-purple-950/60 border border-purple-800 px-2 py-0.5 rounded-full">
-              <TrendingUp className="w-3 h-3" /> Reconciled
+              <TrendingUp className="w-3 h-3" /> {t('status.reconciled', 'Reconciled')}
             </span>
           </div>
 
@@ -206,10 +208,10 @@ export const DispatchSummaryCards: React.FC<DispatchSummaryCardsProps> = ({ disp
             <div className="text-xl sm:text-2xl font-extrabold text-purple-300 font-mono">
               {completedCount}{' '}
               <span className="text-xs font-normal text-slate-400 font-sans">
-                receipts signed
+                {t('table.items', 'receipts signed')}
               </span>
             </div>
-            <div className="text-[11px] text-slate-400">Clean dock handovers</div>
+            <div className="text-[11px] text-slate-400">{t('metric.success_rate', 'Clean dock handovers')}</div>
           </div>
         </div>
 

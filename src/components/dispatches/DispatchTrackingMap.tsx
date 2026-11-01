@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { Dispatch, RouteWaypoint } from '../../types/dispatch.js';
 import { api } from '../../services/api.js';
+import { useTranslation } from '../../context/LanguageContext.js';
 import {
   saveMapCache,
   getMapCache,
@@ -71,6 +72,7 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
   dispatch,
   onTelemetryUpdate,
 }) => {
+  const { t } = useTranslation();
   const [copiedCoords, setCopiedCoords] = useState(false);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [activeWaypointTooltip, setActiveWaypointTooltip] = useState<RouteWaypoint | null>(null);
@@ -511,10 +513,10 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
               onClick={handleSimulateGpsPing}
               disabled={isSimulatingPing}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-950/70 hover:bg-sky-900 text-sky-300 border border-sky-800/60 text-xs font-semibold cursor-pointer transition-colors"
-              title="Record next live GPS telemetry waypoint"
+              title={t('tracking.simulate_ping', 'Record next live GPS telemetry waypoint')}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSimulatingPing ? 'animate-spin' : ''}`} />
-              <span>{isSimulatingPing ? 'Pinging...' : 'Simulate GPS Ping'}</span>
+              <span>{isSimulatingPing ? t('common.loading', 'Pinging...') : t('tracking.simulate_ping', 'Simulate GPS Ping')}</span>
             </button>
           )}
 
@@ -522,17 +524,17 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
           <button
             onClick={handleCopyCoordinates}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold cursor-pointer transition-colors"
-            title="Copy latitude and longitude coordinates"
+            title={t('tracking.copy_coords', 'Copy latitude and longitude coordinates')}
           >
             {copiedCoords ? (
               <>
                 <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-400">Copied</span>
+                <span className="text-emerald-400">{t('tracking.coords_copied', 'Copied')}</span>
               </>
             ) : (
               <>
                 <Copy className="w-3.5 h-3.5 text-slate-400" />
-                <span>Copy Lat/Lng</span>
+                <span>{t('tracking.copy_coords', 'Copy Lat/Lng')}</span>
               </>
             )}
           </button>
@@ -543,10 +545,10 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-semibold cursor-pointer transition-colors"
-            title="View exact geo-coordinates on Google Maps"
+            title={t('tracking.open_maps', 'View exact geo-coordinates on Google Maps')}
           >
             <ExternalLink className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Open in Maps</span>
+            <span>{t('tracking.open_maps', 'Open in Maps')}</span>
           </a>
         </div>
       </div>
@@ -963,7 +965,7 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
 
             <div>
               <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                <Gauge className="w-3 h-3 text-amber-400" /> Speed
+                <Gauge className="w-3 h-3 text-amber-400" /> {t('tracking.speed', 'Speed')}
               </div>
               <div className="font-mono font-semibold text-slate-200">
                 {currentCoords.speedKmh} km/h
@@ -972,7 +974,7 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
 
             <div>
               <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                <Compass className="w-3 h-3 text-indigo-400" /> Heading
+                <Compass className="w-3 h-3 text-indigo-400" /> {t('tracking.heading', 'Heading')}
               </div>
               <div className="font-mono font-semibold text-slate-200">
                 {headingToCardinal(currentCoords.heading)}

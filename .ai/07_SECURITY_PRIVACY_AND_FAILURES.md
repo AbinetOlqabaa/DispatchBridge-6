@@ -16,6 +16,30 @@ Inspect actual auth, APIs, database rules, storage, file uploads, exports, share
 - Use UTC/server timestamps, explicit retention/deletion/backup behavior and minimal data collection.
 - Offline data must be labeled unsynced and handle conflicts; do not promise unsupported offline capabilities.
 
+### National Fayda e-ID & PII Privacy Controls
+- **Restricted PII Classification:** FAN (16 digits) and FIN (12 digits) are classified as Restricted PII.
+- **Server-Side Isolation:** Raw FAN and FIN values are stored strictly on the server-side memory/database model and are never returned in public or administrative API payloads.
+- **Client Masking:** Only masked tokens (`maskedFan`: `•••• •••• •••• 3456`, `maskedFin`: `•••• •••• 9012`, `maskedPhone`: `+251 ••• ••3344`) are transmitted to the frontend.
+- **Leading Zero Integrity:** Represented strictly as numeric strings (`/^\d{16}$/` and `/^\d{12}$/`) to preserve leading zeros without arithmetic distortion.
+
+### OTP Lifecycle & Anti-Abuse
+- **Purpose Binding:** Challenges are cryptographically partitioned by purpose (`REGISTRATION`, `PASSWORD_RESET`, `PROFILE_CHANGE`). A registration OTP cannot be submitted to reset a password.
+- **Brute-Force Rate Limiting:** Challenges are capped at 5 failed verification attempts before permanent revocation.
+- **Single-Use Semantics:** Upon successful verification, the challenge is immediately purged from memory to prevent replay attacks.
+- **5-Minute Expiry:** All challenges automatically expire after 300 seconds.
+
+### Identity Adapter Fail-Closed Policy
+- **Production Mode:** `FaydaProductionAdapter` fails closed when official government API credentials are not provisioned, blocking unverified access.
+- **Simulation Mode:** Clearly flagged via `faydaVerificationMethod: 'SIMULATION'` and prominent amber "Simulation / Dev Mode" indicators in the UI.
+
+### Administrator Lockout & User Governance Protection
+- **Lockout Prevention:** The server explicitly counts active users with the `SUPER_ADMIN` role prior to executing any suspension or role modification.
+- **Boundary Rule:** If the target user is the sole remaining active Super Administrator (`activeSuperAdmins.length <= 1`), the server rejects the operation with HTTP 400 (`Cannot suspend or demote the last remaining active Super Administrator`).
+
+### Profile Photo Upload Security
+- **Size Constraint:** Hard 2MB payload ceiling enforced on client and server.
+- **MIME Whitelisting:** Permitted image formats restricted to JPEG, PNG, and WebP data URIs. Executable and SVG vectors are rejected.
+
 ## Failure behavior
 Every consequential action needs loading, success, failure, retry, and duplicate-submission behavior. Handle network loss, provider outage, expired session, stale form/version conflicts, missing configuration and permission denial honestly.
 

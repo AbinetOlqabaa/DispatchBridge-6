@@ -21,6 +21,7 @@ import { StatusBadge } from '../../components/common/StatusBadge.js';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner.js';
 import { SignaturePad } from '../../components/dispatches/SignaturePad.js';
 import { DamagePhotoUpload } from '../../components/dispatches/DamagePhotoUpload.js';
+import { useTranslation } from '../../context/LanguageContext.js';
 
 interface PublicPartnerViewProps {
   shareToken: string;
@@ -28,6 +29,7 @@ interface PublicPartnerViewProps {
 }
 
 export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken, onExit }) => {
+  const { t } = useTranslation();
   const [dispatch, setDispatch] = useState<Dispatch | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -178,7 +180,7 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
             <Boxes className="w-4 h-4" />
           </div>
           <div>
-            <div className="text-xs font-bold text-white">DispatchBridge Partner Portal</div>
+            <div className="text-xs font-bold text-white">{t('app.name', 'DispatchBridge')} {t('nav.partners', 'Partner Portal')}</div>
             <div className="text-[10px] text-slate-400">Authenticated Delivery Slip</div>
           </div>
         </div>
@@ -189,14 +191,14 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Print Slip</span>
+            <span className="hidden sm:inline">{t('dispatch.print_manifest', 'Print Slip')}</span>
           </button>
           {onExit && (
             <button
               onClick={onExit}
               className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs cursor-pointer"
             >
-              Close
+              {t('common.close', 'Close')}
             </button>
           )}
         </div>
@@ -399,15 +401,15 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
       {/* Interactive Verification Form on Dock */}
       {!isAlreadyReceived && !isVerifying && (
         <div className="bg-slate-900 border border-amber-900/60 rounded-2xl p-6 text-center space-y-3">
-          <h3 className="text-sm font-bold text-white">Unload & Confirm Delivery on Dock</h3>
+          <h3 className="text-sm font-bold text-white">{t('reconcile.title', 'Unload & Confirm Delivery on Dock')}</h3>
           <p className="text-xs text-slate-400 max-w-md mx-auto">
-            Receiving supervisor: Count items offloaded from the carrier truck. Verify physical items match this manifest.
+            {t('reconcile.subtitle', 'Receiving supervisor: Count items offloaded from the carrier truck. Verify physical items match this manifest.')}
           </p>
           <button
             onClick={() => setIsVerifying(true)}
             className="px-6 py-3 min-h-[44px] bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-amber-600/30 cursor-pointer"
           >
-            Start Dock Count & Sign Off
+            {t('action.reconcile', 'Start Dock Count & Sign Off')}
           </button>
         </div>
       )}
@@ -415,9 +417,9 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
       {isVerifying && (
         <div className="bg-slate-900 border border-amber-700/80 rounded-2xl p-6 shadow-2xl space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <h3 className="text-sm font-bold text-white">Confirm Dock Count & Sign Off</h3>
+            <h3 className="text-sm font-bold text-white">{t('reconcile.dock_signature', 'Confirm Dock Count & Sign Off')}</h3>
             <button onClick={() => setIsVerifying(false)} className="text-xs text-slate-400 hover:text-white cursor-pointer min-h-[44px] px-2 flex items-center">
-              Cancel
+              {t('action.cancel', 'Cancel')}
             </button>
           </div>
 
@@ -568,14 +570,14 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
                 onClick={() => setIsVerifying(false)}
                 className="px-4 py-2.5 text-xs text-slate-400 hover:text-white cursor-pointer min-h-[44px] flex items-center justify-center rounded-xl hover:bg-slate-800/60"
               >
-                Cancel
+                {t('action.cancel', 'Cancel')}
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
                 className="px-6 py-2.5 min-h-[44px] bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white text-xs font-semibold rounded-xl cursor-pointer shadow-lg shadow-emerald-600/30 flex items-center justify-center"
               >
-                {isSubmitting ? 'Submitting receipt...' : 'Submit Official Dock Sign-Off'}
+                {isSubmitting ? t('common.loading', 'Submitting receipt...') : t('reconcile.dock_signature', 'Submit Official Dock Sign-Off')}
               </button>
             </div>
           </form>

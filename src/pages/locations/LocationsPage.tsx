@@ -11,6 +11,7 @@ import {
   LayoutGrid,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.js';
+import { useTranslation } from '../../context/LanguageContext.js';
 import { Location, Partner, Dispatch } from '../../types/dispatch.js';
 import { api } from '../../services/api.js';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner.js';
@@ -18,6 +19,7 @@ import { LocationsMapView } from '../../components/locations/LocationsMapView.js
 
 export const LocationsPage: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [locations, setLocations] = useState<Location[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [dispatches, setDispatches] = useState<Dispatch[]>([]);
@@ -104,18 +106,18 @@ export const LocationsPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-sky-400 bg-sky-950 px-2.5 py-0.5 rounded-full border border-sky-800">
-              Dispatch Origins & Logistics Network
+              {t('location.title', 'Dispatch Origins & Logistics Network')}
             </span>
-            <span className="text-xs text-slate-400">{locations.length} terminal docks</span>
+            <span className="text-xs text-slate-400">{locations.length} {t('nav.locations', 'terminal docks')}</span>
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Origin Location Directory</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">{t('location.title', 'Origin Location Directory')}</h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Manage fulfillment centers, dispatch warehouses, and freight loading docks with geospatial coordinate tracking.
+            {t('location.subtitle', 'Manage fulfillment centers, dispatch warehouses, and freight loading docks with geospatial coordinate tracking.')}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* View Mode Toggle (Requirement 7) */}
+          {/* View Mode Toggle */}
           <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700">
             <button
               onClick={() => setViewMode('map')}
@@ -126,7 +128,7 @@ export const LocationsPage: React.FC = () => {
               }`}
             >
               <MapIcon className="w-3.5 h-3.5" />
-              <span>Map View</span>
+              <span>{t('location.map_view', 'Map View')}</span>
             </button>
             <button
               onClick={() => setViewMode('grid')}
@@ -137,7 +139,7 @@ export const LocationsPage: React.FC = () => {
               }`}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Grid View</span>
+              <span>{t('location.grid_view', 'Grid View')}</span>
             </button>
           </div>
 
@@ -147,7 +149,7 @@ export const LocationsPage: React.FC = () => {
               className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>Add Origin Dock</span>
+              <span>{t('location.add_btn', 'Add Origin Dock')}</span>
             </button>
           )}
         </div>
@@ -208,7 +210,7 @@ export const LocationsPage: React.FC = () => {
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
           <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 text-slate-100 shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-white">Add Dispatch Origin Terminal</h3>
+            <h3 className="text-base font-bold text-white">{t('location.add_btn', 'Add Dispatch Origin Terminal')}</h3>
 
             {errorMessage && (
               <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-800 text-rose-300 text-xs flex items-center gap-2">
@@ -219,7 +221,7 @@ export const LocationsPage: React.FC = () => {
 
             <form onSubmit={handleCreateLocation} className="space-y-3 text-xs">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Terminal / Dock Label *</label>
+                <label className="block text-slate-300 font-semibold mb-1">{t('location.label', 'Terminal / Dock Label')} *</label>
                 <input
                   type="text"
                   required
@@ -231,7 +233,7 @@ export const LocationsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Street Address & Bay *</label>
+                <label className="block text-slate-300 font-semibold mb-1">{t('location.address', 'Street Address & Bay')} *</label>
                 <input
                   type="text"
                   required
@@ -244,7 +246,7 @@ export const LocationsPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">City *</label>
+                  <label className="block text-slate-300 font-semibold mb-1">{t('location.city', 'City')} *</label>
                   <input
                     type="text"
                     required
@@ -255,7 +257,7 @@ export const LocationsPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">State / Region *</label>
+                  <label className="block text-slate-300 font-semibold mb-1">{t('location.region', 'State / Region')} *</label>
                   <input
                     type="text"
                     required
@@ -269,7 +271,7 @@ export const LocationsPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Latitude (optional)</label>
+                  <label className="block text-slate-300 font-semibold mb-1">{t('location.coords', 'Latitude')} (optional)</label>
                   <input
                     type="number"
                     step="any"
@@ -280,7 +282,7 @@ export const LocationsPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Longitude (optional)</label>
+                  <label className="block text-slate-300 font-semibold mb-1">{t('location.coords', 'Longitude')} (optional)</label>
                   <input
                     type="number"
                     step="any"
@@ -301,7 +303,7 @@ export const LocationsPage: React.FC = () => {
                   className="rounded bg-slate-800 border-slate-700 text-indigo-600 focus:ring-0"
                 />
                 <label htmlFor="isDefaultLoc" className="text-slate-300 text-xs cursor-pointer">
-                  Set as default origin location for dispatches
+                  {t('location.is_default', 'Set as default origin location for dispatches')}
                 </label>
               </div>
 
@@ -309,16 +311,16 @@ export const LocationsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-3 py-2 text-slate-400 hover:text-white"
+                  className="px-3 py-2 text-slate-400 hover:text-white cursor-pointer"
                 >
-                  Cancel
+                  {t('action.cancel', 'Cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl cursor-pointer"
                 >
-                  {isSubmitting ? 'Saving...' : 'Register Location'}
+                  {isSubmitting ? t('common.loading', 'Saving...') : t('location.create_btn', 'Register Location')}
                 </button>
               </div>
             </form>

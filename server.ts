@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import http from 'http';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 
@@ -21,7 +22,12 @@ const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
-  const PORT = Number(process.env.PORT) || 3000;
+  const httpServer = http.createServer(app);
+
+  // Check process arguments for --port or env var, defaulting to 3000
+  const portArgIdx = process.argv.indexOf('--port');
+  const portFromArg = portArgIdx !== -1 && process.argv[portArgIdx + 1] ? Number(process.argv[portArgIdx + 1]) : null;
+  const PORT = portFromArg || (process.env.PORT && process.env.PORT !== '8080' ? Number(process.env.PORT) : 3000);
 
   // Initialize Super-Admin one-time bootstrap
   initSuperAdminBootstrap();
@@ -61,7 +67,11 @@ async function startServer() {
   // Vite middleware in development
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        // Bind HMR to httpServer so no secondary port (24678) is created
+        hmr: process.env.DISABLE_HMR === 'true' ? false : { server: httpServer },
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);
@@ -74,7 +84,26 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  // Graceful shutdown handlers
+  const gracefulShutdown = () => {
+    httpServer.close(() => {
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(0), 1000).unref();
+  };
+  process.on('SIGTERM', gracefulShutdown);
+  process.on('SIGINT', gracefulShutdown);
+
+  // Handle server errors gracefully without unhandled crash
+  httpServer.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[DispatchBridge] Port ${PORT} is already in use by an active instance.`);
+    } else {
+      console.error('[DispatchBridge] Server error:', err);
+    }
+  });
+
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`[DispatchBridge] Full-Stack Kernel active on http://0.0.0.0:${PORT}`);
   });
 }

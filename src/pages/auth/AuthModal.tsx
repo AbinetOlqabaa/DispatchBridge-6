@@ -18,6 +18,7 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.js';
+import { useTranslation } from '../../context/LanguageContext.js';
 import { UserRole } from '../../types/dispatch.js';
 import { api } from '../../services/api.js';
 import { SUPPORTED_COUNTRIES, normalizeToE164, isValidE164 } from '../../utils/phoneUtils.js';
@@ -34,6 +35,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   initialMode = 'signin',
 }) => {
   const { login, register, verifyPhone, user, quickLoginDemoRole } = useAuth();
+  const { t } = useTranslation();
   const [mode, setMode] = useState<'signin' | 'register' | 'forgot' | 'verifyPhone'>(initialMode);
 
   // Sign In state
@@ -376,7 +378,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
             >
-              Sign In
+              {t('nav.signin', 'Sign In')}
             </button>
             <button
               onClick={() => {
@@ -391,7 +393,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
             >
-              Enroll with Fayda e-ID
+              {t('auth.register_title', 'Enroll with Fayda e-ID')}
             </button>
           </div>
         )}
@@ -428,7 +430,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 }`}
               >
                 <Smartphone className="w-3.5 h-3.5" />
-                <span>Mobile Number</span>
+                <span>{t('auth.mobile_tab', 'Mobile Number')}</span>
               </button>
               <button
                 type="button"
@@ -443,14 +445,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 }`}
               >
                 <Mail className="w-3.5 h-3.5" />
-                <span>Work Email</span>
+                <span>{t('auth.email_tab', 'Work Email')}</span>
               </button>
             </div>
 
             {signInMode === 'MOBILE' ? (
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Mobile Phone Number <span className="text-rose-400">*</span>
+                  {t('auth.mobile_label', 'Mobile Phone Number')} <span className="text-rose-400">*</span>
                 </label>
                 <div className="flex gap-2">
                   <select
@@ -487,7 +489,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             ) : (
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Email Address</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">{t('auth.email_label', 'Email Address')}</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
                   <input
@@ -504,7 +506,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold text-slate-300">Password</label>
+                <label className="block text-xs font-semibold text-slate-300">{t('auth.password_label', 'Password')}</label>
                 <button
                   type="button"
                   onClick={() => {
@@ -515,7 +517,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   }}
                   className="text-xs text-indigo-400 hover:text-indigo-300 cursor-pointer"
                 >
-                  Forgot password?
+                  {t('auth.forgot_password', 'Forgot password?')}
                 </button>
               </div>
               <div className="relative">
@@ -545,11 +547,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 text-white text-sm font-semibold rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
             >
               {isLoading ? (
-                <span>Signing in...</span>
+                <span>{t('auth.signing_in', 'Signing in...')}</span>
               ) : (
                 <>
-                  <span>Sign In</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <KeyRound className="w-4 h-4" />
+                  <span>{t('auth.signin_button', 'Sign In to Portal')}</span>
                 </>
               )}
             </button>

@@ -21,10 +21,12 @@ import {
 } from 'lucide-react';
 import { SystemStatusInfo, StagingReadinessReport } from '../../types/dispatch.js';
 import { api } from '../../services/api.js';
+import { useTranslation } from '../../context/LanguageContext.js';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner.js';
 import { OutboxManagerModal } from '../../components/notifications/OutboxManagerModal.js';
 
 export const SystemStatusPage: React.FC = () => {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<SystemStatusInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [isOutboxOpen, setIsOutboxOpen] = useState(false);
@@ -71,13 +73,13 @@ export const SystemStatusPage: React.FC = () => {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-teal-400 bg-teal-950 px-2.5 py-0.5 rounded-full border border-teal-800">
-              Staging Gateway & Platform Matrix
+              {t('nav.status', 'Staging Gateway & Platform Matrix')}
             </span>
             <span className="text-xs text-slate-400">Master Staging Build v0.3.0</span>
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">System Status & Environment Matrix</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">{t('system.title', 'System Status & Environment Matrix')}</h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Real-time verification of adapters, staging readiness, digital signatures, notification gateways, and audit policies.
+            {t('system.subtitle', 'Real-time verification of adapters, staging readiness, digital signatures, notification gateways, and audit policies.')}
           </p>
         </div>
 
@@ -87,14 +89,14 @@ export const SystemStatusPage: React.FC = () => {
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold cursor-pointer shrink-0 shadow-md shadow-indigo-600/20"
           >
             <Send className="w-3.5 h-3.5" />
-            <span>Outbound Gateway</span>
+            <span>{t('notification.outbox', 'Outbound Gateway')}</span>
           </button>
           <button
             onClick={loadStatus}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold cursor-pointer shrink-0"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>Re-scan</span>
+            <span>{t('system.rescan', 'Re-scan')}</span>
           </button>
         </div>
       </div>
@@ -103,7 +105,7 @@ export const SystemStatusPage: React.FC = () => {
       <div className="bg-amber-950/40 border border-amber-800/80 rounded-2xl p-5 space-y-2">
         <div className="flex items-center gap-2.5 text-amber-300 font-bold text-sm">
           <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-          <span>Notice: Isolated Staging & Development Sandbox Active</span>
+          <span>{t('banner.sandbox_mode', 'Notice: Isolated Staging & Development Sandbox Active')}</span>
         </div>
         <p className="text-xs text-amber-200/90 leading-relaxed">
           The application is operating with an in-memory staging adapter (<code className="text-amber-100">SandboxStore</code>) with full multi-tenant isolation, cryptographic HMAC session validation, outbox delivery queues, digital glass signature capture, and tamper-evident SHA-256 cargo evidence hashes.

@@ -397,7 +397,7 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
                 <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">Status</th>
                 <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">Items</th>
                 <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">Reconciliation Outcome</th>
-                <th className="px-3 sm:px-3.5 py-3 font-semibold text-right whitespace-nowrap">Action</th>
+                <th className="px-3 sm:px-3.5 py-3 font-semibold text-right whitespace-nowrap">{t('table.action', 'Action')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
@@ -419,16 +419,16 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
                       d.totalQuantityLost > 0 ? (
                         <span className="text-rose-400 font-semibold flex items-center gap-1">
                           <AlertTriangle className="w-3.5 h-3.5" />
-                          Shortfall: {d.totalQuantityLost} units
+                          {t('status.shortfall_damage', 'Shortfall')}: {d.totalQuantityLost}
                         </span>
                       ) : (
                         <span className="text-emerald-400 font-medium flex items-center gap-1">
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          Reconciled (100%)
+                          {t('status.reconciled', 'Reconciled (100%)')}
                         </span>
                       )
                     ) : (
-                      <span className="text-slate-500">Pending Receipt</span>
+                      <span className="text-slate-500">{t('status.dispatched', 'In Transit / Pending')}</span>
                     )}
                   </td>
                   <td className="px-3 py-3 text-right whitespace-nowrap">
@@ -436,7 +436,7 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
                       onClick={() => onSelectDispatch(d.id)}
                       className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium cursor-pointer"
                     >
-                      Details
+                      {t('action.details', 'Details')}
                     </button>
                   </td>
                 </tr>

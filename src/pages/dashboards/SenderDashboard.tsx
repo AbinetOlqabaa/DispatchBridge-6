@@ -144,12 +144,12 @@ export const SenderDashboard: React.FC<SenderDashboardProps> = ({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Filter by DSP number, partner, driver..."
+              placeholder={t('dispatch.search_placeholder', 'Search by dispatch #, partner, SKU, cargo...')}
               className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
             />
           </div>
           <span className="text-xs text-slate-400">
-            Showing {filteredDispatches.length} of {dispatches.length} dispatches
+            {t('dispatch.showing_count', 'Showing')} {filteredDispatches.length} {t('dispatch.of_total', 'of')} {dispatches.length} {t('dispatch.dispatches_text', 'dispatches')}
           </span>
         </div>
 
@@ -157,13 +157,13 @@ export const SenderDashboard: React.FC<SenderDashboardProps> = ({
           <table className="w-full text-left text-xs min-w-[760px] lg:min-w-full">
             <thead className="text-[11px] uppercase tracking-wider text-slate-400 bg-slate-950/40 border-b border-slate-800">
               <tr>
-                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">Dispatch #</th>
-                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">Destination</th>
-                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">Status</th>
-                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">Partner View</th>
-                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">Driver & Cargo</th>
-                <th className="px-3 sm:px-3.5 py-3 font-semibold text-right whitespace-nowrap">Share Link</th>
-                <th className="px-3 sm:px-3.5 py-3 font-semibold text-right whitespace-nowrap pr-3.5">Detail</th>
+                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">{t('table.dispatch_number', 'Dispatch #')}</th>
+                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">{t('table.destination_partner', 'Destination')}</th>
+                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">{t('table.status', 'Status')}</th>
+                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">{t('table.view_tracking', 'Partner View')}</th>
+                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">{t('table.carrier', 'Driver & Cargo')}</th>
+                <th className="px-3 sm:px-3.5 py-3 font-semibold text-right whitespace-nowrap">{t('table.share_link', 'Share Link')}</th>
+                <th className="px-3 sm:px-3.5 py-3 font-semibold text-right whitespace-nowrap pr-3.5">{t('table.action', 'Detail')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
@@ -234,7 +234,7 @@ export const SenderDashboard: React.FC<SenderDashboardProps> = ({
                       onClick={() => onSelectDispatch(d.id)}
                       className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium cursor-pointer"
                     >
-                      Inspect
+                      {t('action.inspect', 'Inspect')}
                     </button>
                   </td>
                 </tr>

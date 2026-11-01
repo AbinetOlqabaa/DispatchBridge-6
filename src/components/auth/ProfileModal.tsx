@@ -16,6 +16,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.js';
+import { useTranslation } from '../../context/LanguageContext.js';
 import { api } from '../../services/api.js';
 
 interface ProfileModalProps {
@@ -25,6 +26,7 @@ interface ProfileModalProps {
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
   const { user, updateProfile, removeProfilePhoto } = useAuth();
+  const { t } = useTranslation();
 
   const [name, setName] = useState(user?.name || '');
   const [isUpdatingName, setIsUpdatingName] = useState(false);
@@ -208,8 +210,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
             <UserCheck className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-xl font-bold tracking-tight text-white">User Profile & Identity</h2>
-            <p className="text-xs text-slate-400">Verified credentials, photo, and security controls</p>
+            <h2 className="text-xl font-bold tracking-tight text-white">{t('profile.title', 'User Profile & Identity')}</h2>
+            <p className="text-xs text-slate-400">{t('profile.subtitle', 'Verified credentials, photo, and security controls')}</p>
           </div>
         </div>
 
@@ -251,11 +253,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
             </p>
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-2">
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
-                {user.role}
+                {t(`role.${user.role.toLowerCase()}`, user.role)}
               </span>
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
                 <CheckCircle2 className="w-2.5 h-2.5" />
-                <span>Verified Account</span>
+                <span>{t('profile.fayda_verified_badge', 'Verified Account')}</span>
               </span>
             </div>
 
@@ -268,7 +270,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                 className="text-xs px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium flex items-center gap-1 transition cursor-pointer disabled:opacity-50"
               >
                 <Camera className="w-3 h-3" />
-                <span>{user.avatarUrl ? 'Change Photo' : 'Upload Photo'}</span>
+                <span>{user.avatarUrl ? t('profile.upload_btn', 'Change Photo') : t('profile.upload_btn', 'Upload Photo')}</span>
               </button>
               {user.avatarUrl && (
                 <button
@@ -278,7 +280,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                   className="text-xs px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-medium flex items-center gap-1 transition cursor-pointer disabled:opacity-50"
                 >
                   <Trash2 className="w-3 h-3" />
-                  <span>Remove</span>
+                  <span>{t('profile.remove_btn', 'Remove')}</span>
                 </button>
               )}
             </div>
@@ -288,7 +290,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
         {/* Identity & Fayda Verification Badges */}
         <div className="space-y-3 mb-6">
           <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            Verified Identity & Credentials
+            {t('profile.fayda_section', 'Verified Identity & Credentials')}
           </div>
 
           <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2.5">
@@ -296,7 +298,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-400 flex items-center gap-1.5">
                 <Smartphone className="w-3.5 h-3.5 text-slate-500" />
-                <span>Mobile Number:</span>
+                <span>{t('profile.phone_verified', 'Mobile Number')}:</span>
               </span>
               <span className="font-mono font-medium text-slate-200">
                 {user.maskedPhone || user.phoneNumber}
@@ -307,7 +309,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
             <div className="flex items-center justify-between text-xs border-t border-slate-800/80 pt-2">
               <span className="text-slate-400 flex items-center gap-1.5">
                 <CreditCard className="w-3.5 h-3.5 text-sky-400" />
-                <span>Fayda Account (FAN):</span>
+                <span>{t('profile.fan_masked', 'Fayda Account (FAN)')}:</span>
               </span>
               <span className="font-mono font-medium text-sky-300">
                 {user.maskedFan || '•••• •••• •••• 4444'}
@@ -318,7 +320,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
             <div className="flex items-center justify-between text-xs border-t border-slate-800/80 pt-2">
               <span className="text-slate-400 flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Fayda Identification (FIN):</span>
+                <span>{t('profile.fin_masked', 'Fayda Identification (FIN)')}:</span>
               </span>
               <span className="font-mono font-medium text-emerald-300">
                 {user.maskedFin || '•••• •••• 3333'}
@@ -327,10 +329,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
 
             {/* Fayda Verification Status Chip */}
             <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
-              <span className="text-[11px] text-slate-400">National e-ID Verification:</span>
+              <span className="text-[11px] text-slate-400">{t('auth.fayda_badge', 'National e-ID Verification')}:</span>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                 <ShieldCheck className="w-3 h-3" />
-                <span>Fayda Verified (Simulation / Dev Mode)</span>
+                <span>{t('auth.fayda_verified', 'Fayda Verified')}</span>
               </span>
             </div>
           </div>
@@ -342,7 +344,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
         {/* Edit Full Name Form */}
         <form onSubmit={handleSaveName} className="mb-6 p-4 rounded-xl bg-slate-950/40 border border-slate-800">
           <label className="block text-xs font-medium text-slate-300 mb-1.5">
-            Display Name
+            {t('auth.fullname_label', 'Display Name')}
           </label>
           <div className="flex gap-2">
             <input
@@ -357,13 +359,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
               disabled={isUpdatingName || name === user.name}
               className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition cursor-pointer disabled:opacity-40"
             >
-              {isUpdatingName ? 'Saving...' : 'Save'}
+              {isUpdatingName ? t('common.loading', 'Saving...') : t('profile.save_name_btn', 'Save')}
             </button>
           </div>
           {nameSuccess && (
             <p className="text-xs text-emerald-400 mt-1.5 flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3" />
-              <span>Name updated successfully!</span>
+              <span>{t('common.success', 'Name updated successfully!')}</span>
             </p>
           )}
         </form>
@@ -373,7 +375,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Lock className="w-4 h-4 text-indigo-400" />
-              <span className="text-xs font-semibold text-slate-200">Security & Password</span>
+              <span className="text-xs font-semibold text-slate-200">{t('profile.change_password_title', 'Security & Password')}</span>
             </div>
             <button
               type="button"
@@ -384,7 +386,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
               }}
               className="text-xs text-indigo-400 hover:text-indigo-300 font-medium cursor-pointer"
             >
-              {showPasswordSection ? 'Hide' : 'Change Password'}
+              {showPasswordSection ? t('common.close', 'Hide') : t('profile.change_password_title', 'Change Password')}
             </button>
           </div>
 

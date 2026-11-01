@@ -135,19 +135,19 @@ export const ReceiverDashboard: React.FC<ReceiverDashboardProps> = ({ onSelectDi
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
         <h2 className="text-sm font-bold text-white flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          Completed Receipt Archive
+          {t('status.reconciled', 'Completed Receipt Archive')}
         </h2>
 
         <div className="overflow-x-auto rounded-xl border border-slate-800/80 scrollbar-thin">
           <table className="w-full text-left text-xs min-w-[640px] lg:min-w-full">
             <thead className="text-[11px] uppercase tracking-wider text-slate-400 bg-slate-950/40 border-b border-slate-800">
               <tr>
-                <th className="px-2 sm:px-3.5 py-3 font-semibold whitespace-nowrap">Dispatch #</th>
-                <th className="px-2 sm:px-3.5 py-3 font-semibold whitespace-nowrap">Supplier</th>
-                <th className="px-2 sm:px-3.5 py-3 font-semibold whitespace-nowrap">Status</th>
-                <th className="px-2 sm:px-3.5 py-3 font-semibold whitespace-nowrap">Sent / Received</th>
-                <th className="px-2 sm:px-3.5 py-3 font-semibold whitespace-nowrap">Signed By</th>
-                <th className="px-2 sm:px-3.5 py-3 font-semibold text-right whitespace-nowrap pr-3 sm:pr-4">Details</th>
+                <th className="px-2 sm:px-3.5 py-3 font-semibold whitespace-nowrap">{t('table.dispatch_number', 'Dispatch #')}</th>
+                <th className="px-2 sm:px-3.5 py-3 font-semibold whitespace-nowrap">{t('table.sender_supplier', 'Supplier')}</th>
+                <th className="px-2 sm:px-3.5 py-3 font-semibold whitespace-nowrap">{t('table.status', 'Status')}</th>
+                <th className="px-2 sm:px-3.5 py-3 font-semibold whitespace-nowrap">{t('table.quantity_loss', 'Sent / Received')}</th>
+                <th className="px-2 sm:px-3.5 py-3 font-semibold whitespace-nowrap">{t('reconcile.signed_by', 'Signed By')}</th>
+                <th className="px-2 sm:px-3.5 py-3 font-semibold text-right whitespace-nowrap pr-3 sm:pr-4">{t('table.action', 'Details')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
@@ -160,18 +160,18 @@ export const ReceiverDashboard: React.FC<ReceiverDashboardProps> = ({ onSelectDi
                   </td>
                   <td className="px-2.5 sm:px-3.5 py-3 whitespace-nowrap">
                     <div className="font-mono">
-                      {d.totalQuantityReceived ?? 0} / {d.totalQuantityDispatched} units
+                      {d.totalQuantityReceived ?? 0} / {d.totalQuantityDispatched} {t('metric.units_dispatched', 'units')}
                     </div>
                     {d.totalQuantityLost && d.totalQuantityLost > 0 ? (
                       <span className="text-[10px] text-rose-400 font-semibold">
-                        Loss: {d.totalQuantityLost} units
+                        {t('status.shortfall_damage', 'Loss')}: {d.totalQuantityLost}
                       </span>
                     ) : (
-                      <span className="text-[10px] text-emerald-400 font-medium">100% Intact</span>
+                      <span className="text-[10px] text-emerald-400 font-medium">{t('dispatch.condition_good', '100% Intact')}</span>
                     )}
                   </td>
                   <td className="px-2.5 sm:px-3.5 py-3 text-slate-300 whitespace-nowrap">
-                    <div>{d.receiverSignoff?.signerName || 'Verified'}</div>
+                    <div>{d.receiverSignoff?.signerName || t('common.verified', 'Verified')}</div>
                     <div className="text-[10px] text-slate-500">
                       {d.receivedAt ? new Date(d.receivedAt).toLocaleDateString() : ''}
                     </div>
@@ -181,7 +181,7 @@ export const ReceiverDashboard: React.FC<ReceiverDashboardProps> = ({ onSelectDi
                       onClick={() => onSelectDispatch(d.id)}
                       className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs cursor-pointer"
                     >
-                      View Slip
+                      {t('action.details', 'View Slip')}
                     </button>
                   </td>
                 </tr>

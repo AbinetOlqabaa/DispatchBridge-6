@@ -272,10 +272,10 @@ export const DispatchListPage: React.FC<DispatchListPageProps> = ({
               <button
                 onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
                 className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium px-3 py-1.5 rounded-xl cursor-pointer transition-colors shadow-sm"
-                title="Export filtered dispatches"
+                title={t('action.export', 'Export')}
               >
                 <Download className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Export</span>
+                <span>{t('action.export', 'Export')}</span>
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
               </button>
 
@@ -287,7 +287,7 @@ export const DispatchListPage: React.FC<DispatchListPageProps> = ({
                   >
                     <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
                     <div>
-                      <div className="font-medium">Export CSV</div>
+                      <div className="font-medium">{t('action.export_csv', 'Export CSV')}</div>
                       <div className="text-[10px] text-slate-400">Excel / Spreadsheet</div>
                     </div>
                   </button>
@@ -297,7 +297,7 @@ export const DispatchListPage: React.FC<DispatchListPageProps> = ({
                   >
                     <FileText className="w-4 h-4 text-rose-400" />
                     <div>
-                      <div className="font-medium">Export PDF</div>
+                      <div className="font-medium">{t('action.export_pdf', 'Export PDF')}</div>
                       <div className="text-[10px] text-slate-400">Reconciliation Report</div>
                     </div>
                   </button>

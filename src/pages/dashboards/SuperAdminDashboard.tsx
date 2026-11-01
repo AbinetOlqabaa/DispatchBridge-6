@@ -24,6 +24,7 @@ import { AuditLogEntry, Business, SystemStatusInfo, User, UserRole } from '../..
 import { api } from '../../services/api.js';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner.js';
 import { ProfileSummaryCard } from '../../components/common/ProfileSummaryCard.js';
+import { useTranslation } from '../../context/LanguageContext.js';
 
 interface SuperAdminDashboardProps {
   onNavigateStatus: () => void;
@@ -31,6 +32,7 @@ interface SuperAdminDashboardProps {
 
 export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onNavigateStatus }) => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'USERS'>('OVERVIEW');
 
   // Overview data
@@ -210,13 +212,13 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onNavi
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-purple-400 bg-purple-950 px-2.5 py-0.5 rounded-full border border-purple-800">
-              Super Administrator Control Center
+              {t('role.super_admin', 'Super Administrator')}
             </span>
-            <span className="text-xs text-slate-400">Privileged Session</span>
+            <span className="text-xs text-slate-400">{t('common.verified', 'Privileged Session')}</span>
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">System Infrastructure & User Governance</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">{t('admin.title', 'System Infrastructure & User Governance')}</h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Cross-tenant inspection, Fayda identity oversight, user activation controls, and cryptographic audit ledger.
+            {t('admin.subtitle', 'Cross-tenant inspection, Fayda identity oversight, user activation controls, and cryptographic audit ledger.')}
           </p>
         </div>
 
@@ -229,14 +231,14 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onNavi
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>Refresh</span>
+            <span>{t('action.refresh', 'Refresh')}</span>
           </button>
           <button
             onClick={onNavigateStatus}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-lg shadow-purple-600/30 cursor-pointer"
           >
             <Activity className="w-3.5 h-3.5" />
-            <span>Diagnostic Health</span>
+            <span>{t('system.title', 'Diagnostic Health')}</span>
           </button>
         </div>
       </div>
@@ -252,7 +254,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onNavi
           }`}
         >
           <Activity className="w-4 h-4" />
-          <span>Platform Overview & Ledger</span>
+          <span>{t('admin.tab_overview', 'Platform Overview & Ledger')}</span>
         </button>
         <button
           onClick={() => {
@@ -266,7 +268,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onNavi
           }`}
         >
           <Users className="w-4 h-4" />
-          <span>User Administration & Roles ({usersList.length})</span>
+          <span>{t('admin.tab_users', 'User Administration & Roles')} ({usersList.length})</span>
         </button>
       </div>
 
@@ -495,10 +497,10 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onNavi
             <div>
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <Users className="w-5 h-5 text-purple-400" />
-                <span>Platform User Accounts & Identity Oversight</span>
+                <span>{t('admin.tab_users', 'Platform User Accounts & Identity Oversight')}</span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Manage roles, view Fayda identity verification status, and enforce account suspension with audit logs.
+                {t('admin.subtitle', 'Manage roles, view Fayda identity verification status, and enforce account suspension with audit logs.')}
               </p>
             </div>
 
@@ -510,7 +512,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onNavi
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && loadUsers()}
-                  placeholder="Search name, phone, FAN..."
+                  placeholder={t('admin.search_users', 'Search name, phone, FAN...')}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
                 />
               </div>
@@ -523,11 +525,11 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onNavi
                 }}
                 className="bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-purple-500"
               >
-                <option value="">All Roles</option>
-                <option value="SUPER_ADMIN">Super Admin</option>
-                <option value="BUSINESS_OWNER">Business Owner</option>
-                <option value="SENDER">Sender / Dispatcher</option>
-                <option value="RECEIVER">Receiver / Partner</option>
+                <option value="">{t('admin.filter_role', 'All Roles')}</option>
+                <option value="SUPER_ADMIN">{t('role.super_admin', 'Super Admin')}</option>
+                <option value="BUSINESS_OWNER">{t('role.business_owner', 'Business Owner')}</option>
+                <option value="SENDER">{t('role.sender', 'Sender / Dispatcher')}</option>
+                <option value="RECEIVER">{t('role.receiver', 'Receiver / Partner')}</option>
               </select>
 
               <select
@@ -538,9 +540,9 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onNavi
                 }}
                 className="bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-purple-500"
               >
-                <option value="">All Statuses</option>
-                <option value="ACTIVE">Active</option>
-                <option value="SUSPENDED">Suspended</option>
+                <option value="">{t('admin.filter_status', 'All Statuses')}</option>
+                <option value="ACTIVE">{t('admin.active_badge', 'Active')}</option>
+                <option value="SUSPENDED">{t('admin.suspended_badge', 'Suspended')}</option>
               </select>
 
               <button
@@ -700,27 +702,27 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onNavi
 
             <div className="flex items-center gap-2.5 mb-4 text-rose-400">
               <UserX className="w-5 h-5" />
-              <h3 className="text-base font-bold text-white">Suspend User Account</h3>
+              <h3 className="text-base font-bold text-white">{t('admin.suspend_modal_title', 'Suspend User Account')}</h3>
             </div>
 
             <p className="text-xs text-slate-300 mb-2 leading-relaxed">
               You are about to suspend <span className="font-semibold text-white">{suspendTarget.name}</span> (<code className="text-slate-400">{suspendTarget.id}</code>).
             </p>
             <p className="text-[11px] text-amber-400/90 mb-4 bg-amber-950/40 p-2.5 rounded-xl border border-amber-900/40">
-              Suspended users cannot authenticate, create dispatches, or access tenant ledgers. All active session tokens will be rejected.
+              {t('admin.lockout_warning', 'Suspended users cannot authenticate, create dispatches, or access tenant ledgers. All active session tokens will be rejected.')}
             </p>
 
             <form onSubmit={handleConfirmSuspend} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Suspension Justification Reason <span className="text-rose-400">*</span>
+                  {t('admin.suspend_reason_label', 'Suspension Justification Reason')} <span className="text-rose-400">*</span>
                 </label>
                 <textarea
                   required
                   rows={3}
                   value={suspendReason}
                   onChange={(e) => setSuspendReason(e.target.value)}
-                  placeholder="e.g. Audit policy violation, pending investigation into fraudulent manifest report..."
+                  placeholder={t('admin.suspend_reason_placeholder', 'Provide operational or compliance reason for suspension...')}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500"
                 />
               </div>
@@ -731,14 +733,14 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onNavi
                   onClick={() => setSuspendTarget(null)}
                   className="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer"
                 >
-                  Cancel
+                  {t('action.cancel', 'Cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingSuspend || !suspendReason.trim()}
                   className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-lg shadow-rose-600/30 transition cursor-pointer disabled:opacity-50"
                 >
-                  {isSubmittingSuspend ? 'Suspending...' : 'Confirm Suspension'}
+                  {isSubmittingSuspend ? t('common.loading', 'Suspending...') : t('admin.confirm_suspend', 'Confirm Suspension')}
                 </button>
               </div>
             </form>

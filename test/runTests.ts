@@ -36,6 +36,7 @@ import {
 } from '../src/server/adapters/faydaAdapter.js';
 import { otpChallengeStore } from '../src/server/adapters/otpAdapter.js';
 import { normalizeToE164, isValidE164 } from '../src/utils/phoneUtils.js';
+import { translations } from '../src/i18n/translations.js';
 
 interface TestResult {
   group: string;
@@ -1524,6 +1525,68 @@ async function runTestSuite() {
       assert(err.message.includes('last remaining active Super Administrator'), 'Lockout protection prevents demotion');
     }
     assert(lockoutRoleDemotionBlocked, 'Super-admin lockout protection must block demotion of last active super-admin');
+  });
+
+  // =========================================================================
+  // Layer 7: Localization & Multi-Language Dictionary Parity
+  // =========================================================================
+  console.log('\n--- Layer 7: Localization & Multi-Language Translation Parity ---');
+
+  await test('Layer 7: Localization', 'Dictionary Parity Across All 5 Supported Languages (en, am, om, ti, so)', () => {
+    const supportedLangs = ['en', 'am', 'om', 'ti', 'so'] as const;
+    const baseKeys = Object.keys(translations.en);
+    assert(baseKeys.length > 50, `Base English dictionary must have comprehensive coverage (found ${baseKeys.length} keys)`);
+
+    for (const lang of supportedLangs) {
+      assert(Boolean(translations[lang]), `Translation dictionary for language "${lang}" must exist`);
+      const langDict = translations[lang];
+      const langKeys = Object.keys(langDict);
+
+      // Check key completeness
+      const missingKeys: string[] = [];
+      for (const key of baseKeys) {
+        if (!langDict[key] || langDict[key].trim() === '') {
+          missingKeys.push(key);
+        }
+      }
+
+      assert(
+        missingKeys.length === 0,
+        `Language "${lang}" is missing ${missingKeys.length} keys: ${missingKeys.slice(0, 5).join(', ')}${missingKeys.length > 5 ? '...' : ''}`
+      );
+      assert(langKeys.length >= baseKeys.length, `Language "${lang}" has full key count (${langKeys.length}/${baseKeys.length})`);
+    }
+  });
+
+  await test('Layer 7: Localization', 'Core Domain Translations are Non-Empty and Distinct from Fallback Keys', () => {
+    const testKeys = [
+      'app.name',
+      'nav.dashboard',
+      'nav.dispatches',
+      'nav.locations',
+      'nav.partners',
+      'nav.audit',
+      'nav.status',
+      'action.create_dispatch',
+      'action.save',
+      'status.dispatched',
+      'status.received_complete',
+      'role.business_owner',
+      'role.sender',
+      'role.receiver',
+      'auth.signin_title',
+      'dispatch.title',
+      'reconcile.title',
+    ];
+
+    const supportedLangs = ['en', 'am', 'om', 'ti', 'so'] as const;
+    for (const lang of supportedLangs) {
+      for (const key of testKeys) {
+        const val = translations[lang][key];
+        assert(typeof val === 'string' && val.trim().length > 0, `Language "${lang}" must provide valid string for "${key}"`);
+        assert(val !== key, `Language "${lang}" translation for "${key}" should not merely repeat the raw key`);
+      }
+    }
   });
 
   // -------------------------------------------------------------------------

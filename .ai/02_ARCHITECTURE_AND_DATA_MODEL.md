@@ -11,7 +11,9 @@
 - Define indexes for actual query patterns and document deployment/setup requirements.
 
 ## Suggested entities
-- `User`: id, displayName, email, phoneE164, phoneVerified, status, createdAt, updatedAt, lastLoginAt.
+- `User`: id (`usr_...` opaque format), displayName, email, phoneE164, maskedPhone, phoneVerified, avatarUrl (JPEG/PNG/WebP <= 2MB data URI or URL), fan (16 numeric digits, server-only), maskedFan (`•••• •••• •••• 3456`), fin (12 numeric digits, server-only), maskedFin (`•••• •••• 9012`), faydaStatus (`VERIFIED` | `FAILED` | `PENDING` | `EXEMPT`), faydaVerifiedAt, faydaVerificationMethod (`SIMULATION` | `OFFICIAL_GATEWAY` | `MANUAL`), suspendedReason, status (`ACTIVE` | `SUSPENDED`), createdAt, updatedAt, lastLoginAt.
+- `OtpChallenge`: id, phoneNumber (E.164), code, purpose (`REGISTRATION` | `PASSWORD_RESET` | `PROFILE_CHANGE`), attempts, maxAttempts (5), createdAt, expiresAt (5 min TTL), usedAt.
+- `FaydaVerificationResult`: success, verificationId, reason, matchedFields, timestamp, provider (`FaydaSimulationAdapter` | `FaydaProductionAdapter`).
 - `Business`: id, legalOrDisplayName, registrationNumber optional, countryCode, address, status, ownerUserIds, createdAt.
 - `Membership`: id, userId, businessId, role, status, permissions/overrides if needed, invitedBy, createdAt.
 - `Partner`: id, owningBusinessId, partnerBusinessId optional, displayName, contactName, email optional, phoneE164 optional, countryCode, region, city, addressLines, postalCode optional, notes, verificationStatus, createdAt.

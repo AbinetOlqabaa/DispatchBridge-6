@@ -1,11 +1,11 @@
 # Build State — Business Dispatch & Delivery Reconciliation (DispatchBridge)
 
-- **Last Updated:** 2026-10-23T04:33:00Z
+- **Last Updated:** 2026-11-01T10:35:00Z
 - **Runtime / Platform:** Node.js v22.14.0 on Linux container with Express 4 backend & Vite 8 React 19 Frontend. Configured as an installable mobile-first Progressive Web App (PWA). *Note: Native Android build tooling (Gradle / Android SDK) is not supported in this runtime environment.*
 - **Stack:**
-  - Backend: Node.js, Express 4, TypeScript, HMAC SHA-256 session tokens, timing-safe one-time bootstrap tokens, in-memory domain adapter (`sandboxStore`) with full multi-tenant isolation.
+  - Backend: Node.js, Express 4, TypeScript, HMAC SHA-256 session tokens, timing-safe one-time bootstrap tokens, in-memory domain adapter (`sandboxStore`) with full multi-tenant isolation, Fayda e-ID verification adapter, OTP challenge lifecycle store.
   - Frontend: React 19, Tailwind CSS v4, Lucide React, Context API (`AuthContext`, `LanguageContext`, `ThemeContext`), clean component and page architecture.
-  - Test Suite: Node.js TypeScript test runner (`npm test` -> `tsx test/runTests.ts`) — **28/28 automated tests passing with 0 failures**.
+  - Test Suite: Node.js TypeScript test runner (`npm test` -> `tsx test/runTests.ts`) — **38/38 automated tests passing with 0 failures**.
 
 ---
 
@@ -14,14 +14,15 @@
 | Phase | Plan Document | Status | Notes |
 |---|---|---|---|
 | Phase 1 | `.ai/01_PRODUCT_REQUIREMENTS.md` | **COMPLETE** | Roles (`SUPER_ADMIN`, `BUSINESS_OWNER`, `SENDER`, `RECEIVER`), multi-line manifests, view receipts, and discrepancy reconciliation flows confirmed & implemented. |
-| Phase 2 | `.ai/02_ARCHITECTURE_AND_DATA_MODEL.md` | **COMPLETE** | Domain schema (`DispatchLine`, `Location`, `Partner`, `ViewReceipt`, `DiscrepancyCase`, `AuditLogEntry`, `NotificationItem`) and FSM states (`DRAFT` → `SUBMITTED` → `DISPATCHED` → `VIEWED` → `PARTIALLY_RECEIVED` / `RECEIVED` → `RECONCILED`). |
+| Phase 2 | `.ai/02_ARCHITECTURE_AND_DATA_MODEL.md` | **COMPLETE** | Domain schema (`DispatchLine`, `Location`, `Partner`, `ViewReceipt`, `DiscrepancyCase`, `AuditLogEntry`, `NotificationItem`, and Fayda `User` fields) and FSM states (`DRAFT` → `SUBMITTED` → `DISPATCHED` → `VIEWED` → `PARTIALLY_RECEIVED` / `RECEIVED` → `RECONCILED`). |
 | Phase 3 | `.ai/03_AUTH_AND_AUTHORIZATION.md` | **COMPLETE** | One-time random bootstrap secret (`/api/auth/bootstrap-superadmin`), HMAC signed session tokens, multi-tenant RBAC, quick role sandbox switcher for testing. |
 | Phase 4 | `.ai/04_DISPATCH_AND_RECONCILIATION.md` | **COMPLETE** | 2-step dispatch creation (draft + pre-submit review), unguessable share tokens (`/?token=...`), tamper-resistant immutable quantity enforcement, line-level discrepancy reporting (shortage, damaged, loss), signoffs, sender acknowledgement/resolution. |
 | Phase 5 | `.ai/05_NOTIFICATIONS_AND_AUDIT.md` | **COMPLETE** | Real-time in-app notification drawer with unread counter & read tracking; immutable audit trail logging actor, role, correlation ID, and metadata for every mutation. |
 | Phase 6 | `.ai/06_TABLET_FIRST_UI_UX_AND_ACCESSIBILITY.md` | **COMPLETE** | Comprehensive tablet portrait (768x1024, 820x1180) & landscape (1024x768, 1180x820) optimizations. Balanced 2-column card wrapping, unclipped filter pills, container-bounded tables with enhanced high-contrast scrollbars, and unclipped navigation. |
 | Phase 7 | `.ai/07_SECURITY_PRIVACY_AND_FAILURES.md` | **COMPLETE** | Strict cross-tenant isolation on store and route levels (HTTP 403 on mismatched tenant/partner access), timingSafeEqual constant-time comparisons, idempotency key deduplication. |
-| Phase 8 | `.ai/08_TESTING_AND_ACCEPTANCE.md` | **COMPLETE** | 28 automated unit, security, and integration acceptance tests passing with 0 failures (`npm test`). `tsc --noEmit` passing with 0 type errors. |
+| Phase 8 | `.ai/08_TESTING_AND_ACCEPTANCE.md` | **COMPLETE** | 38 automated unit, security, integration, and identity acceptance tests passing with 0 failures (`npm test`). `tsc --noEmit` passing with 0 type errors. |
 | Phase 9 | `.ai/09_RELEASE_CHECKLIST.md` | **COMPLETE** | Release checklist evaluated honestly. Verdict: **READY FOR STAGING**. |
+| Phase 10 | `.ai/IDENTITY_UPDATE_EXECUTE.md` | **COMPLETE** | National Fayda e-ID integration, FAN (16 numeric digits) & FIN (12 numeric digits) format validation and data masking, mobile number (E.164) + password sign-in, OTP challenge store with rate limiting & purpose binding, step-up password changes, forgot-password recovery via FAN/FIN verification, profile photo uploads (<= 2MB), and Super Administrator user management with lockout protection for the last remaining super-admin. |
 
 ---
 
@@ -72,6 +73,30 @@
     - Balanced 2x2 metric card grids on tablet portrait; 4 columns on landscape and desktop.
     - Zero page-level horizontal overflow; cleanly bounded table scroll areas with visible, high-contrast `.scrollbar-thin` styling.
     - Status filter bar wrapped to dedicated row on tablet portrait so all 6 status pills and search controls remain completely unclipped.
+13. **National Fayda e-ID Verification & Registration Gateway (`FaydaSimulationAdapter` & `FaydaProductionAdapter`):**
+    - Enforced 16 numeric digits for FAN (Fayda Account Number) and 12 numeric digits for FIN (Fayda Identification Number), preserving leading zeros with field-level regex validation.
+    - Dedicated Fayda simulation mode with deterministic fixtures (valid match, timeout fixture for numbers ending in `0000`, mismatch fixture for numbers ending in `999`/`9999`) and clear "Simulation / Dev Mode" badge.
+    - Fail-closed production adapter when live government authority credentials are not configured.
+    - Strict atomic linkage: verified phone (E.164), FAN, and FIN are bound to an opaque internal user ID (`usr_...`).
+    - Raw FAN and FIN are never returned in public or admin API responses; always masked (`•••• •••• •••• 3456`, `•••• •••• 9012`).
+14. **Mobile Number + Password Primary Authentication:**
+    - Mobile phone number (E.164) is the primary login credential with country code selector (+251 Ethiopia default, +1 US, +254 Kenya, etc.) and email fallback.
+    - Timing-safe generic invalid-credential errors preventing user enumeration.
+15. **OTP Verification Provider Abstraction (`OtpAdapter`):**
+    - In-memory challenge store with 5-minute expiration, 30s resend cooldown, 5-attempt limit, purpose binding (`REGISTRATION`, `PASSWORD_RESET`, `PROFILE_CHANGE`), and single-use immediate revocation.
+    - Dev simulation mode displays the OTP code in a dismissible banner or allows test code `123456`.
+16. **Self-Service Identity Recovery & Step-Up Security:**
+    - Password recovery requires matching verified mobile number, FAN, and FIN, generating an OTP challenge to the bound mobile number before allowing password reset.
+    - Signed-in password changes enforce step-up authentication via mobile OTP challenge in addition to current password confirmation.
+17. **Profile Picture Management & Profile Modal (`ProfileModal` & `ProfileSummaryCard`):**
+    - Profile modal supports image uploads (JPEG, PNG, WebP) with strict 2MB client-side validation, thumbnail preview, and removal.
+    - Responsive Profile Summary Card displays user avatar or initials, full name, masked phone number, active business name, role badge, and Fayda e-ID verification status badge (never raw FAN/FIN) across all role dashboards.
+18. **Super Administrator User Governance (`SuperAdminDashboard` & `/api/admin`):**
+    - Paginated user list with full-text search across name, email, phone, and business name.
+    - Filter by role (`SUPER_ADMIN`, `BUSINESS_OWNER`, `SENDER`, `RECEIVER`) and status (`ACTIVE`, `SUSPENDED`).
+    - Account suspension requiring a mandatory justification reason; suspended users are rejected at authentication with the reason.
+    - Account reactivation clearing the suspension reason.
+    - Role management with built-in **lockout protection preventing suspension or role demotion of the last remaining active Super Administrator**.
 
 ### Sandbox Mode Notice:
 - Persistent storage currently uses the in-memory `sandboxStore` adapter with pre-seeded demonstration data. Cloud database (e.g., Cloud SQL / Firestore) and external SMS/WhatsApp gateway credentials remain unconfigured until staging deployment. Transparent sandbox banners are displayed in the UI.
@@ -121,7 +146,18 @@ $ npm test
 #   [PASS] Responsive Layout Boundaries: All tables, summary metrics, and status endpoints provide bounded fields without page-level overflow
 #   [PASS] Public Partner Token Reconciliation: External recipient signs off dock manifest via share token with digital signature
 #   [PASS] Tablet Multi-Viewport Density: Metric cards 2-column wrapping, responsive table scrolling bounds, and filter row protection
-# TEST RESULTS: 28/28 PASSED (0 failed)
+# --- 6. Identity, Fayda e-ID, OTP & Admin Governance Tests ---
+#   [PASS] FAN and FIN numeric format validation & data masking
+#   [PASS] Public self-registration strictly rejects SUPER_ADMIN role
+#   [PASS] Fayda adapter simulation fixtures & production fail-closed
+#   [PASS] OTP challenge lifecycle (purpose binding, attempt limits, single-use)
+#   [PASS] Mobile number authentication with E.164 normalization
+#   [PASS] End-to-end registration flow with unique linkage & opaque usr_ ID
+#   [PASS] Forgot-password recovery with FAN + FIN match & phone OTP
+#   [PASS] Signed-in password change with step-up OTP challenge
+#   [PASS] Profile photo upload size limits, validation & removal
+#   [PASS] Admin user governance & lockout protection for last super-admin
+# TEST RESULTS: 38/38 PASSED (0 failed)
 # ALL ACCEPTANCE TESTS PASSED SUCCESSFULLY!
 
 # 3. Applet Compilation Check:
@@ -133,7 +169,7 @@ $ npm test
 ## 4. Release Checklist Assessment (`.ai/09_RELEASE_CHECKLIST.md`)
 
 - [x] Build/type-check/lint passes in actual project environment (`npm run lint` -> 0 errors).
-- [x] Relevant unit, security, and integration tests pass (`npm test` -> 28/28 PASS).
+- [x] Relevant unit, security, and integration tests pass (`npm test` -> 38/38 PASS).
 - [x] Critical end-to-end flows verified (Dispatch creation -> Manifest view tracking -> Dock receipt reporting -> Discrepancy resolution).
 - [x] No hardcoded production secrets or test credentials; random 24-byte bootstrap tokens.
 - [x] Dependencies reviewed and locked in `package.json`.
@@ -176,7 +212,8 @@ $ npm test
   - Updated table to `min-w-[640px] lg:min-w-full`.
 - **Automated Test Suite Expansion (`test/runTests.ts`)**:
   - Added Test #28: `Tablet UX & Responsive Stability: Tablet Multi-Viewport Density: Metric cards 2-column wrapping, responsive table scrolling bounds, and filter row protection`.
-  - All 28 acceptance tests pass with 0 failures (`npm test`).
+  - Added Layer 6 Identity Tests (#29 - #38): FAN/FIN numeric validation & masking, public SUPER_ADMIN registration rejection, Fayda simulation & fail-closed adapters, OTP challenge lifecycle, mobile E.164 authentication, end-to-end registration flow, forgot-password recovery via FAN/FIN verification, step-up password change, profile photo upload size limits, and admin user governance with last super-admin lockout protection.
+  - All 38 acceptance tests pass with 0 failures (`npm test`).
 - **Visual Browser Verification Across Matrix (`playwright-cli`)**:
   - Captured and inspected live screenshots:
     - `verify-768x1024-dispatches.png`: Confirmed 2-column metric cards, no text collision, and dedicated unclipped status filter row.
@@ -192,7 +229,8 @@ $ npm test
 - [x] Table cell horizontal padding and minimum width constraints across all manifest and dispatch views.
 - [x] Unauthenticated guest exploration data loading and summary cards.
 - [x] Mobile bottom navigation & desktop navbar regression verification.
-- [x] 28/28 acceptance tests passing in test runner.
+- [x] 38/38 acceptance tests passing in test runner.
+- [x] Zero compilation or lint errors.
 - [x] Zero compilation or lint errors.
 
 ---

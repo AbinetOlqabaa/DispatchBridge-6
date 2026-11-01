@@ -372,7 +372,7 @@ export const DispatchDetailPage: React.FC<DispatchDetailPageProps> = ({
           <div className="bg-slate-800/40 p-3.5 rounded-xl border border-slate-800">
             <div className="text-slate-400 mb-1 flex items-center gap-1.5 font-semibold">
               <Warehouse className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Origin Loading Terminal</span>
+              <span>{t('create_dispatch.origin_dock', 'Origin Loading Terminal')}</span>
             </div>
             <div className="font-semibold text-white text-sm">{dispatch.originLocationSnapshot.label}</div>
             <div className="text-slate-400 text-[11px] mt-0.5">{dispatch.originLocationSnapshot.address}</div>
@@ -381,7 +381,7 @@ export const DispatchDetailPage: React.FC<DispatchDetailPageProps> = ({
           <div className="bg-slate-800/40 p-3.5 rounded-xl border border-slate-800">
             <div className="text-slate-400 mb-1 flex items-center gap-1.5 font-semibold">
               <Building className="w-3.5 h-3.5 text-sky-400" />
-              <span>Receiving Partner Destination</span>
+              <span>{t('create_dispatch.destination_partner', 'Receiving Partner Destination')}</span>
             </div>
             <div className="font-semibold text-white text-sm">{dispatch.destinationSnapshot.partnerName}</div>
             <div className="text-slate-400 text-[11px] mt-0.5">{dispatch.destinationSnapshot.address}</div>
@@ -393,7 +393,7 @@ export const DispatchDetailPage: React.FC<DispatchDetailPageProps> = ({
           <div className="bg-slate-800/40 p-3.5 rounded-xl border border-slate-800 sm:col-span-2 lg:col-span-1">
             <div className="text-slate-400 mb-1 flex items-center gap-1.5 font-semibold">
               <Truck className="w-3.5 h-3.5 text-blue-400" />
-              <span>Carrier & Driver</span>
+              <span>{t('table.carrier', 'Carrier & Driver')}</span>
             </div>
             <div className="font-semibold text-white text-sm">{dispatch.driverName || 'Standard Freight'}</div>
             <div className="text-slate-400 text-[11px] mt-0.5">
@@ -698,14 +698,14 @@ export const DispatchDetailPage: React.FC<DispatchDetailPageProps> = ({
           <table className="w-full text-left text-xs min-w-[780px] lg:min-w-full">
             <thead className="text-[11px] uppercase tracking-wider text-slate-400 bg-slate-950/40 border-b border-slate-800">
               <tr>
-                <th className="px-3.5 py-3 font-semibold whitespace-nowrap">SKU</th>
-                <th className="px-3.5 py-3 font-semibold whitespace-nowrap">Item Description</th>
-                <th className="px-3.5 py-3 font-semibold text-right whitespace-nowrap">Dispatched</th>
-                <th className="px-3.5 py-3 font-semibold text-right whitespace-nowrap">Received</th>
-                <th className="px-3.5 py-3 font-semibold text-right whitespace-nowrap">Shortfall</th>
-                <th className="px-3.5 py-3 font-semibold whitespace-nowrap">Condition</th>
-                <th className="px-3.5 py-3 font-semibold whitespace-nowrap">Discrepancy Category</th>
-                <th className="px-3.5 py-3 font-semibold whitespace-nowrap">Notes</th>
+                <th className="px-3.5 py-3 font-semibold whitespace-nowrap">{t('table.sku', 'SKU')}</th>
+                <th className="px-3.5 py-3 font-semibold whitespace-nowrap">{t('table.item_name', 'Item Description')}</th>
+                <th className="px-3.5 py-3 font-semibold text-right whitespace-nowrap">{t('table.qty_sent', 'Dispatched')}</th>
+                <th className="px-3.5 py-3 font-semibold text-right whitespace-nowrap">{t('table.qty_received', 'Received')}</th>
+                <th className="px-3.5 py-3 font-semibold text-right whitespace-nowrap">{t('status.shortfall_damage', 'Shortfall')}</th>
+                <th className="px-3.5 py-3 font-semibold whitespace-nowrap">{t('table.condition', 'Condition')}</th>
+                <th className="px-3.5 py-3 font-semibold whitespace-nowrap">{t('reconcile.discrepancy_reported', 'Discrepancy Category')}</th>
+                <th className="px-3.5 py-3 font-semibold whitespace-nowrap">{t('create_dispatch.notes', 'Notes')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-mono">
