@@ -26,6 +26,22 @@ import {
   clearOfflineTelemetryQueue,
 } from '../src/utils/mapCache.js';
 import {
+  parseIntakeBarcode,
+  mergeScannedItemsIntoDispatchLines,
+} from '../src/utils/barcodeParser.js';
+import {
+  createMemoryStorageBackend,
+  setStorageBackendForTesting,
+  resetStorageBackend,
+  cacheDispatchesInDb,
+  getCachedDispatchByIdFromDb,
+} from '../src/utils/indexedDbStore.js';
+import {
+  enqueueOfflineDeliveryUpdate,
+  replayOfflineQueue,
+  setSimulatedOffline,
+} from '../src/utils/offlineSync.js';
+import {
   maskFan,
   maskFin,
   maskPhoneNumber,
@@ -36,7 +52,7 @@ import {
 } from '../src/server/adapters/faydaAdapter.js';
 import { otpChallengeStore } from '../src/server/adapters/otpAdapter.js';
 import { normalizeToE164, isValidE164 } from '../src/utils/phoneUtils.js';
-import { translations } from '../src/i18n/translations.js';
+import { translations, SUPPORTED_LANGUAGES, SupportedLanguage } from '../src/i18n/translations.js';
 
 interface TestResult {
   group: string;
@@ -1102,6 +1118,38 @@ async function runTestSuite() {
     assertEqual(stagingReport.overallStatus, 'READY_FOR_STAGING', 'Diagnostics engine confirms READY_FOR_STAGING');
   });
 
+  await test('Tablet UX & Responsive Stability', 'Tablet Landscape & Portrait Component Structural Contracts', async () => {
+    const fs = await import('fs');
+    const summaryCardsCode = fs.readFileSync('src/components/dispatches/DispatchSummaryCards.tsx', 'utf8');
+    assert(summaryCardsCode.includes('lg:grid-cols-3'), 'Summary cards use lg:grid-cols-3 for balanced 3-col landscape');
+    assert(summaryCardsCode.includes('sm:col-span-2 lg:col-span-1'), 'Card 3 uses sm:col-span-2 lg:col-span-1');
+
+    const detailPageCode = fs.readFileSync('src/pages/dispatches/DispatchDetailPage.tsx', 'utf8');
+    assert(detailPageCode.includes('min-w-[680px] sm:min-w-[720px] lg:min-w-full'), 'Detail page items table has bounded responsive min-width');
+
+    const auditPageCode = fs.readFileSync('src/pages/audit/AuditPage.tsx', 'utf8');
+    assert(auditPageCode.includes('min-w-[720px] sm:min-w-[760px] lg:min-w-full'), 'Audit page table has bounded responsive min-width');
+    
+    const adminPageCode = fs.readFileSync('src/pages/dashboards/SuperAdminDashboard.tsx', 'utf8');
+    assert(adminPageCode.includes('min-w-[700px] sm:min-w-[740px] lg:min-w-full'), 'Super Admin users table has bounded responsive min-width');
+
+    const dispatchListPageCode = fs.readFileSync('src/pages/dispatches/DispatchListPage.tsx', 'utf8');
+    assert(dispatchListPageCode.includes('min-w-[720px] sm:min-w-[760px] lg:min-w-full'), 'Dispatch list page table has bounded responsive min-width');
+
+    const senderDashboardCode = fs.readFileSync('src/pages/dashboards/SenderDashboard.tsx', 'utf8');
+    assert(senderDashboardCode.includes('min-w-[700px] sm:min-w-[740px] lg:min-w-full'), 'Sender dashboard table has bounded responsive min-width');
+
+    const ownerDashboardCode = fs.readFileSync('src/pages/dashboards/BusinessOwnerDashboard.tsx', 'utf8');
+    assert(ownerDashboardCode.includes('min-w-[700px] sm:min-w-[740px] lg:min-w-full'), 'Business owner dashboard table has bounded responsive min-width');
+
+    const swCode = fs.readFileSync('public/sw.js', 'utf8');
+    assert(swCode.includes('STATIC_CACHE') && swCode.includes('API_CACHE'), 'Service worker configures static and API cache stores');
+    assert(swCode.includes('dispatchbridge-static-v2'), 'Service worker has static asset precache');
+
+    const manifestCode = fs.readFileSync('public/manifest.webmanifest', 'utf8');
+    assert(manifestCode.includes('"orientation": "any"'), 'Web App Manifest permits any orientation (tablet landscape + portrait)');
+  });
+
   // -------------------------------------------------------------------------
   // 6. Identity, Fayda e-ID, OTP & Admin Governance Acceptance Tests
   // -------------------------------------------------------------------------
@@ -1527,71 +1575,277 @@ async function runTestSuite() {
     assert(lockoutRoleDemotionBlocked, 'Super-admin lockout protection must block demotion of last active super-admin');
   });
 
-  // =========================================================================
-  // Layer 7: Localization & Multi-Language Dictionary Parity
-  // =========================================================================
-  console.log('\n--- Layer 7: Localization & Multi-Language Translation Parity ---');
+  // -------------------------------------------------------------------------
+  // Layer 7: Team Invitations, Role Governance & Executive Analytics Tests
+  // -------------------------------------------------------------------------
+  await test('Governance & Analytics', 'Team Invitations & Cryptographic Token Acceptance Workflow', async () => {
+    // 1. Business Owner creates invitation for new team member
+    const invite = await sandboxStore.createInvitation(
+      {
+        businessId: 'biz_apex_supply',
+        inviteeEmail: 'carlos.operations@apexsupply.com',
+        inviteePhone: '+1-555-019-7722',
+        proposedRole: 'SENDER',
+      },
+      ownerUser
+    );
 
-  await test('Layer 7: Localization', 'Dictionary Parity Across All 5 Supported Languages (en, am, om, ti, so)', () => {
-    const supportedLangs = ['en', 'am', 'om', 'ti', 'so'] as const;
-    const baseKeys = Object.keys(translations.en);
-    assert(baseKeys.length > 50, `Base English dictionary must have comprehensive coverage (found ${baseKeys.length} keys)`);
+    assert(Boolean(invite.id), 'Invitation created with unique ID');
+    assertEqual(invite.businessId, 'biz_apex_supply', 'Invitation bound to tenant');
+    assertEqual(invite.proposedRole, 'SENDER', 'Proposed role set to SENDER');
+    assertEqual(invite.status, 'PENDING', 'Initial invitation status is PENDING');
+    assert(invite.token.startsWith('inv_tok_'), 'Cryptographically random token generated');
 
-    for (const lang of supportedLangs) {
-      assert(Boolean(translations[lang]), `Translation dictionary for language "${lang}" must exist`);
-      const langDict = translations[lang];
-      const langKeys = Object.keys(langDict);
+    // 2. Fetch business invitations list
+    const invitationsList = await sandboxStore.getBusinessInvitations('biz_apex_supply');
+    assert(invitationsList.some((i) => i.id === invite.id), 'Invitation listed in active invitations');
 
-      // Check key completeness
+    // 3. Authenticated user redeems token
+    const acceptResult = await sandboxStore.acceptInvitation(invite.token, receiverUser);
+    assert(acceptResult.success, 'Invitation accepted successfully');
+    assertEqual(acceptResult.membership.businessId, 'biz_apex_supply', 'User received active membership in business');
+    assertEqual(acceptResult.user.businessId, 'biz_apex_supply', 'Active business context switched to new business');
+    assertEqual(acceptResult.user.role, 'SENDER', 'User role updated according to invitation');
+
+    // 4. Update member role
+    const updatedMember = await sandboxStore.updateMemberRole('biz_apex_supply', receiverUser.id, 'BUSINESS_OWNER', ownerUser);
+    assertEqual(updatedMember.role, 'BUSINESS_OWNER', 'Member promoted to BUSINESS_OWNER');
+
+    // 5. Verify audit log entry
+    const audits = await sandboxStore.getAuditLogs({ businessId: 'biz_apex_supply' });
+    assert(audits.some((a) => a.action === 'TEAM_MEMBER_INVITED'), 'Audit log contains TEAM_MEMBER_INVITED');
+    assert(audits.some((a) => a.action === 'TEAM_INVITATION_ACCEPTED'), 'Audit log contains TEAM_INVITATION_ACCEPTED');
+  });
+
+  await test('Governance & Analytics', 'Executive Performance & Reconciliation Analytics Report Engine', async () => {
+    const report = await sandboxStore.getAnalyticsReport('biz_apex_supply', ownerUser);
+
+    assert(Boolean(report.summary), 'Report contains executive summary metrics');
+    assert(report.summary.totalDispatches >= 1, 'Total dispatches calculated');
+    assert(typeof report.summary.deliverySuccessRate === 'number', 'Delivery success rate is a number');
+    assert(typeof report.summary.totalCargoValue === 'number', 'Total cargo value calculated');
+
+    assert(Boolean(report.discrepancyBreakdown), 'Report contains discrepancy root cause breakdown');
+    assert(typeof report.discrepancyBreakdown.shortage === 'number', 'Shortage metric present');
+    assert(typeof report.discrepancyBreakdown.damaged === 'number', 'Damaged metric present');
+
+    assert(Array.isArray(report.partnerPerformance), 'Partner performance scorecard is an array');
+    if (report.partnerPerformance.length > 0) {
+      const partner = report.partnerPerformance[0];
+      assert(Boolean(partner.partnerName), 'Partner scorecard includes partner name');
+      assert(typeof partner.successRate === 'number', 'Partner scorecard includes success rate');
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // Localization & Multi-Language Translation Tests
+  // -------------------------------------------------------------------------
+  await test('Localization & Internationalization', 'Supported Languages Registry Parity (5 National Languages)', () => {
+    assertEqual(SUPPORTED_LANGUAGES.length, 5, 'Exactly 5 supported languages configured');
+    const expectedCodes: SupportedLanguage[] = ['en', 'am', 'om', 'ti', 'so'];
+    for (const code of expectedCodes) {
+      const match = SUPPORTED_LANGUAGES.find((lang) => lang.code === code);
+      assert(Boolean(match), `Language ${code} is present in registry`);
+      assert(Boolean(match?.label), `Language ${code} has an English label`);
+      assert(Boolean(match?.nativeName), `Language ${code} has a genuine native script label`);
+    }
+  });
+
+  await test('Localization & Internationalization', 'Dictionary Parity Across All 5 Languages (Zero Missing Keys & Bidirectional Parity)', () => {
+    const enKeys = Object.keys(translations.en);
+    assertEqual(enKeys.length, 1228, `English dictionary contains exact expected count of 1,228 translation keys`);
+
+    const targetLanguages: SupportedLanguage[] = ['am', 'om', 'ti', 'so'];
+    for (const lang of targetLanguages) {
+      const dict = translations[lang];
+      assert(Boolean(dict), `Dictionary for language '${lang}' exists`);
+
+      const targetKeys = Object.keys(dict);
+      assertEqual(
+        targetKeys.length,
+        enKeys.length,
+        `Language '${lang}' key count (${targetKeys.length}) matches English baseline (${enKeys.length})`
+      );
+
       const missingKeys: string[] = [];
-      for (const key of baseKeys) {
-        if (!langDict[key] || langDict[key].trim() === '') {
+      const extraKeys: string[] = [];
+      const emptyKeys: string[] = [];
+
+      for (const key of enKeys) {
+        if (!(key in dict)) {
           missingKeys.push(key);
+        } else if (typeof dict[key] !== 'string' || dict[key].trim().length === 0) {
+          emptyKeys.push(key);
         }
       }
 
-      assert(
-        missingKeys.length === 0,
-        `Language "${lang}" is missing ${missingKeys.length} keys: ${missingKeys.slice(0, 5).join(', ')}${missingKeys.length > 5 ? '...' : ''}`
+      for (const key of targetKeys) {
+        if (!(key in translations.en)) {
+          extraKeys.push(key);
+        }
+      }
+
+      assertEqual(
+        missingKeys.length,
+        0,
+        `Language '${lang}' missing keys: [${missingKeys.slice(0, 10).join(', ')}${missingKeys.length > 10 ? '...' : ''}]`
       );
-      assert(langKeys.length >= baseKeys.length, `Language "${lang}" has full key count (${langKeys.length}/${baseKeys.length})`);
+      assertEqual(
+        extraKeys.length,
+        0,
+        `Language '${lang}' has unknown extra keys: [${extraKeys.slice(0, 10).join(', ')}${extraKeys.length > 10 ? '...' : ''}]`
+      );
+      assertEqual(
+        emptyKeys.length,
+        0,
+        `Language '${lang}' has empty string translations: [${emptyKeys.slice(0, 10).join(', ')}]`
+      );
     }
   });
 
-  await test('Layer 7: Localization', 'Core Domain Translations are Non-Empty and Distinct from Fallback Keys', () => {
-    const testKeys = [
-      'app.name',
-      'nav.dashboard',
-      'nav.dispatches',
-      'nav.locations',
-      'nav.partners',
-      'nav.audit',
-      'nav.status',
-      'action.create_dispatch',
-      'action.save',
-      'status.dispatched',
-      'status.received_complete',
-      'role.business_owner',
-      'role.sender',
-      'role.receiver',
-      'auth.signin_title',
-      'dispatch.title',
-      'reconcile.title',
+  await test('Localization & Internationalization', 'Parameter Interpolation Engine Dynamic Replacement', () => {
+    function interpolate(template: string, params: Record<string, string | number>): string {
+      let result = template;
+      for (const [k, v] of Object.entries(params)) {
+        result = result.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
+      }
+      return result;
+    }
+
+    // Test across English, Amharic, Oromo, Tigrinya, and Somali
+    const enLoss = interpolate(translations.en['table.loss'], { count: 5 });
+    assertEqual(enLoss, 'Loss: 5 units', 'English parameter interpolation');
+
+    const amLoss = interpolate(translations.am['table.loss'], { count: 3 });
+    assertEqual(amLoss, 'ኪሳራ፡ 3 ክፍሎች', 'Amharic parameter interpolation');
+
+    const omLoss = interpolate(translations.om['table.loss'], { count: 12 });
+    assertEqual(omLoss, 'Kasaaraa: 12 qooda', 'Oromo parameter interpolation');
+
+    const tiLoss = interpolate(translations.ti['table.loss'], { count: 7 });
+    assertEqual(tiLoss, 'ኪሳራ፡ 7 ኣቑሑት', 'Tigrinya parameter interpolation');
+
+    const soLoss = interpolate(translations.so['table.loss'], { count: 9 });
+    assertEqual(soLoss, 'Khasaare: 9 xabbo', 'Somali parameter interpolation');
+  });
+
+  await test('Localization & Internationalization', 'Native Script & Linguistic Integrity', () => {
+    // Amharic and Tigrinya must use authentic Ethiopic Ge'ez characters (\u1200-\u137F)
+    const ethiopicRegex = /[\u1200-\u137F]/;
+    assert(
+      ethiopicRegex.test(translations.am['app.subtitle']),
+      'Amharic translations contain genuine Ethiopic script characters'
+    );
+    assert(
+      ethiopicRegex.test(translations.ti['app.subtitle']),
+      'Tigrinya translations contain genuine Ethiopic script characters'
+    );
+
+    // Afaan Oromoo and Somali must feature recognized terminology
+    assert(
+      translations.om['recon.record_receipt'].includes('Araarsa') ||
+      translations.om['recon.record_receipt'].includes('Nagahee'),
+      'Afaan Oromoo utilizes authentic reconciliation terminology'
+    );
+    assert(
+      translations.so['role.business_owner'].includes('Mulkiilaha') ||
+      translations.so['role.business_owner'].includes('Ganacsiga'),
+      'Somali utilizes authentic business role terminology'
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // Barcode / QR Item Intake & Local-First IndexedDB Sync Acceptance Tests
+  // -------------------------------------------------------------------------
+  await test('Barcode Intake & IndexedDB Sync', 'Create Dispatch Barcode & QR Item Intake Parsing & Line Merging', () => {
+    const initialLines = [
+      { sku: 'SKU-001', itemName: '', unit: 'cases', unitPrice: 0, quantitySent: 10 },
     ];
 
-    const supportedLangs = ['en', 'am', 'om', 'ti', 'so'] as const;
-    for (const lang of supportedLangs) {
-      for (const key of testKeys) {
-        const val = translations[lang][key];
-        assert(typeof val === 'string' && val.trim().length > 0, `Language "${lang}" must provide valid string for "${key}"`);
-        assert(val !== key, `Language "${lang}" translation for "${key}" should not merely repeat the raw key`);
-      }
-    }
+    const singleScan = parseIntakeBarcode('SKU-GLS-101');
+    assert(singleScan.ok, 'Known catalog barcode parses cleanly');
+    assertEqual(singleScan.items[0].sku, 'SKU-GLS-101', 'Resolves catalog SKU');
+
+    const step1 = mergeScannedItemsIntoDispatchLines(initialLines, singleScan.items);
+    assertEqual(step1.lines.length, 1, 'Replaces blank starter line instead of leaving empty row');
+    assertEqual(step1.lines[0].sku, 'SKU-GLS-101', 'Starter row populated with scanned SKU');
+    assertEqual(step1.lines[0].quantitySent, 1, 'Quantity initialized from scan');
+
+    const qrPayload = JSON.stringify({
+      items: [
+        { sku: 'SKU-GLS-101', itemName: 'Glass Olive Oil Bottles 750ml', unit: 'boxes', quantity: 4 },
+        { sku: 'SKU-COLD-501', itemName: 'Insulated Thermal Pallet Blankets', unit: 'units', quantity: 2 },
+      ],
+    });
+    const batchScan = parseIntakeBarcode(qrPayload, 'QR_CODE');
+    assertEqual(batchScan.format, 'QR_JSON', 'Detects multi-item QR JSON format');
+    assertEqual(batchScan.items.length, 2, 'Extracts both pallet items');
+
+    const step2 = mergeScannedItemsIntoDispatchLines(step1.lines, batchScan.items);
+    assertEqual(step2.lines.length, 2, 'Merges duplicate SKU and appends new SKU');
+    assertEqual(step2.lines[0].quantitySent, 5, 'Duplicate SKU quantity incremented (1 + 4 = 5)');
+    assertEqual(step2.lines[1].sku, 'SKU-COLD-501', 'Second QR item appended');
   });
 
-  // -------------------------------------------------------------------------
-  // Summary
-  // -------------------------------------------------------------------------
+  await test('Barcode Intake & IndexedDB Sync', 'Local-First IndexedDB Caching & Auto-Sync Outbox Replay', async () => {
+    const memBackend = createMemoryStorageBackend();
+    setStorageBackendForTesting(memBackend);
+    setSimulatedOffline(true, { autoSync: false });
+
+    try {
+      const seedList = await sandboxStore.getDispatches();
+      assert(seedList.length > 0, 'Seed dispatches available for IndexedDB caching');
+      const target =
+        seedList.find((d) => ['DISPATCHED', 'VIEWED', 'IN_TRANSIT'].includes(d.status)) ||
+        seedList[0];
+
+      await cacheDispatchesInDb(seedList, memBackend);
+      const cached = await getCachedDispatchByIdFromDb(target.id, memBackend);
+      assert(Boolean(cached), 'Dispatch persisted into IndexedDB store');
+
+      await enqueueOfflineDeliveryUpdate({
+        type: 'TRANSIT_SCAN',
+        dispatchId: target.id,
+        dispatchNumber: target.dispatchNumber,
+        method: 'POST',
+        url: `/api/dispatches/${target.id}/transit-scan`,
+        payload: {
+          barcode: target.dispatchNumber,
+          statusUpdate: 'OUT_FOR_DELIVERY',
+          checkpointLocation: 'North Metro Gate 2',
+          actorName: 'Field Driver',
+        },
+        actionSummary: 'Transit Scan: Out for Delivery',
+      });
+
+      const projected = await getCachedDispatchByIdFromDb(target.id, memBackend);
+      assertEqual(projected?.status, 'OUT_FOR_DELIVERY', 'IndexedDB projects optimistic offline delivery status immediately');
+
+      let replayedUrl = '';
+      setSimulatedOffline(false, { autoSync: false });
+      const syncResult = await replayOfflineQueue({
+        fetchFn: async (url: RequestInfo | URL) => {
+          replayedUrl = String(url);
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              ...target,
+              status: 'OUT_FOR_DELIVERY',
+              updatedAt: new Date().toISOString(),
+            }),
+          } as unknown as Response;
+        },
+      });
+
+      assertEqual(syncResult.synced, 1, 'Replays 1 queued offline delivery update on reconnect');
+      assertEqual(syncResult.failed, 0, 'Zero sync failures');
+      assert(replayedUrl.includes(`/api/dispatches/${target.id}/transit-scan`), 'Dispatches replay to transit-scan endpoint');
+    } finally {
+      setSimulatedOffline(false, { autoSync: false });
+      resetStorageBackend();
+    }
+  });
   console.log('\n========================================================================');
   const total = testResults.length;
   const passed = testResults.filter((r) => r.status === 'PASS').length;

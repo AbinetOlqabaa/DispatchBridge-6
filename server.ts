@@ -1,7 +1,6 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import http from 'http';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 
@@ -14,6 +13,8 @@ import systemRoutes from './src/server/routes/systemRoutes.js';
 import locationRoutes from './src/server/routes/locationRoutes.js';
 import notificationRoutes from './src/server/routes/notificationRoutes.js';
 import adminRoutes from './src/server/routes/adminRoutes.js';
+import membershipRoutes from './src/server/routes/membershipRoutes.js';
+import reportRoutes from './src/server/routes/reportRoutes.js';
 
 dotenv.config();
 
@@ -22,12 +23,7 @@ const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
-  const httpServer = http.createServer(app);
-
-  // Check process arguments for --port or env var, defaulting to 3000
-  const portArgIdx = process.argv.indexOf('--port');
-  const portFromArg = portArgIdx !== -1 && process.argv[portArgIdx + 1] ? Number(process.argv[portArgIdx + 1]) : null;
-  const PORT = portFromArg || (process.env.PORT && process.env.PORT !== '8080' ? Number(process.env.PORT) : 3000);
+  const PORT = Number(process.env.PORT) || 3000;
 
   // Initialize Super-Admin one-time bootstrap
   initSuperAdminBootstrap();
@@ -54,6 +50,8 @@ async function startServer() {
   app.use('/api/audit', auditRoutes);
   app.use('/api/system', systemRoutes);
   app.use('/api/admin', adminRoutes);
+  app.use('/api/memberships', membershipRoutes);
+  app.use('/api/reports', reportRoutes);
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {
@@ -67,11 +65,7 @@ async function startServer() {
   // Vite middleware in development
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
-      server: {
-        middlewareMode: true,
-        // Bind HMR to httpServer so no secondary port (24678) is created
-        hmr: process.env.DISABLE_HMR === 'true' ? false : { server: httpServer },
-      },
+      server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
@@ -84,26 +78,7 @@ async function startServer() {
     });
   }
 
-  // Graceful shutdown handlers
-  const gracefulShutdown = () => {
-    httpServer.close(() => {
-      process.exit(0);
-    });
-    setTimeout(() => process.exit(0), 1000).unref();
-  };
-  process.on('SIGTERM', gracefulShutdown);
-  process.on('SIGINT', gracefulShutdown);
-
-  // Handle server errors gracefully without unhandled crash
-  httpServer.on('error', (err: NodeJS.ErrnoException) => {
-    if (err.code === 'EADDRINUSE') {
-      console.error(`[DispatchBridge] Port ${PORT} is already in use by an active instance.`);
-    } else {
-      console.error('[DispatchBridge] Server error:', err);
-    }
-  });
-
-  httpServer.listen(PORT, '0.0.0.0', () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`[DispatchBridge] Full-Stack Kernel active on http://0.0.0.0:${PORT}`);
   });
 }

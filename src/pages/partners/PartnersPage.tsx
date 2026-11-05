@@ -85,7 +85,7 @@ export const PartnersPage: React.FC<PartnersPageProps> = ({ onCreateDispatchWith
     }
   };
 
-  if (loading) return <LoadingSpinner label="Loading partner directory..." />;
+  if (loading) return <LoadingSpinner label={t('msg.loading')} />;
 
   const canAddPartner = user && ['BUSINESS_OWNER', 'SUPER_ADMIN'].includes(user.role);
 
@@ -96,13 +96,13 @@ export const PartnersPage: React.FC<PartnersPageProps> = ({ onCreateDispatchWith
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-sky-400 bg-sky-950 px-2.5 py-0.5 rounded-full border border-sky-800">
-              {t('partner.title', 'Receiving Partners')}
+              {t('nav.partners', 'Receiving Partners')}
             </span>
-            <span className="text-xs text-slate-400">{partners.length} {t('common.verified', 'verified')}</span>
+            <span className="text-xs text-slate-400">{partners.length} {t('metric.registered_partners')}</span>
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">{t('partner.title', 'Partner Directory & Delivery Docks')}</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">{t('nav.partners', 'Partner Directory')}</h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            {t('partner.subtitle', 'Manage receiving partners, retail storefronts, and wholesale distribution hubs.')}
+            {t('action.manage_partners', 'Manage receiving partners, retail storefronts, and wholesale distribution hubs.')}
           </p>
         </div>
 
@@ -112,7 +112,7 @@ export const PartnersPage: React.FC<PartnersPageProps> = ({ onCreateDispatchWith
             className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>{t('partner.add_btn', 'Add Partner Destination')}</span>
+            <span>{t('action.add_partner', 'Add Partner Destination')}</span>
           </button>
         )}
       </div>
@@ -126,16 +126,26 @@ export const PartnersPage: React.FC<PartnersPageProps> = ({ onCreateDispatchWith
           >
             <div>
               <div className="flex items-start justify-between gap-2 mb-2">
-                <h3 className="font-bold text-white text-base">{partner.name}</h3>
+                <h3 className="font-bold text-white text-base">{t(partner.name)}</h3>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 text-sky-300 border border-slate-700 uppercase">
-                  {partner.type}
+                  {partner.type === 'RETAILER'
+                    ? t('partner.type_retailer')
+                    : partner.type === 'WHOLESALER'
+                    ? t('partner.type_wholesaler')
+                    : partner.type === 'DISTRIBUTOR'
+                    ? t('partner.type_distributor')
+                    : partner.type === 'FRANCHISE'
+                    ? t('partner.type_franchise')
+                    : partner.type === 'CONSTRUCTION_SITE'
+                    ? t('partner.type_construction')
+                    : partner.type}
                 </span>
               </div>
 
               <div className="space-y-2 text-xs text-slate-300 pt-2 border-t border-slate-800/80">
                 <div className="flex items-center gap-2 text-slate-400">
                   <Building className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                  <span>Contact: {partner.contactPerson}</span>
+                  <span>{t('table.contact')}: {t(partner.contactPerson)}</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-400">
                   <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
@@ -147,7 +157,7 @@ export const PartnersPage: React.FC<PartnersPageProps> = ({ onCreateDispatchWith
                 </div>
                 <div className="flex items-start gap-2 text-slate-400">
                   <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
-                  <span className="line-clamp-2">{partner.deliveryAddress}</span>
+                  <span className="line-clamp-2">{t(partner.deliveryAddress)}</span>
                 </div>
               </div>
             </div>
@@ -158,7 +168,7 @@ export const PartnersPage: React.FC<PartnersPageProps> = ({ onCreateDispatchWith
                 className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer mt-3"
               >
                 <Truck className="w-3.5 h-3.5 text-sky-400" />
-                <span>Create Dispatch to Partner</span>
+                <span>{t('action.create_dispatch', 'Create Dispatch')}</span>
               </button>
             )}
           </div>
@@ -167,9 +177,9 @@ export const PartnersPage: React.FC<PartnersPageProps> = ({ onCreateDispatchWith
 
       {/* Add Partner Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 text-slate-100 shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-white">{t('partner.create_modal_title', 'Add New Receiving Partner')}</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 text-slate-100 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto scrollbar-thin">
+            <h3 className="text-base font-bold text-white">{t('action.add_partner', 'Add New Receiving Partner')}</h3>
 
             {errorMessage && (
               <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-800 text-rose-300 text-xs flex items-center gap-2">
@@ -180,58 +190,58 @@ export const PartnersPage: React.FC<PartnersPageProps> = ({ onCreateDispatchWith
 
             <form onSubmit={handleCreatePartner} className="space-y-3 text-xs">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">{t('partner.name', 'Company / Branch Name')} *</label>
+                <label className="block text-slate-300 font-semibold mb-1">{t('auth.biz_legal_name', 'Company / Branch Name')} *</label>
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Metro Retail South Bay"
+                  placeholder={t('ptn.placeholder_name', 'e.g. Metro Retail South Bay')}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">{t('partner.type', 'Partner Type')}</label>
+                <label className="block text-slate-300 font-semibold mb-1">{t('table.type', 'Partner Type')}</label>
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value as any)}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white"
                 >
-                  <option value="RETAILER">Retailer</option>
-                  <option value="WHOLESALER">Wholesaler</option>
-                  <option value="DISTRIBUTOR">Distributor</option>
-                  <option value="FRANCHISE">Franchise</option>
-                  <option value="CONSTRUCTION_SITE">Construction Site / Project</option>
+                  <option value="RETAILER">{t('partner.type_retailer', 'Retailer')}</option>
+                  <option value="WHOLESALER">{t('partner.type_wholesaler', 'Wholesaler')}</option>
+                  <option value="DISTRIBUTOR">{t('partner.type_distributor', 'Distributor')}</option>
+                  <option value="FRANCHISE">{t('partner.type_franchise', 'Franchise')}</option>
+                  <option value="CONSTRUCTION_SITE">{t('partner.type_construction', 'Construction Site / Project')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">{t('partner.contact', 'Contact Person')} *</label>
+                <label className="block text-slate-300 font-semibold mb-1">{t('table.contact', 'Contact Person')} *</label>
                 <input
                   type="text"
                   required
                   value={contactPerson}
                   onChange={(e) => setContactPerson(e.target.value)}
-                  placeholder="e.g. David Miller (Receiving Lead)"
+                  placeholder={t('ptn.placeholder_contact', 'e.g. David Miller (Receiving Lead)')}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">{t('partner.email', 'Email')} *</label>
+                  <label className="block text-slate-300 font-semibold mb-1">{t('auth.email_address', 'Email')} *</label>
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="dock@partner.com"
+                    placeholder={t('ptn.placeholder_email', 'dock@partner.com')}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">{t('partner.phone', 'Phone')} *</label>
+                  <label className="block text-slate-300 font-semibold mb-1">{t('auth.mobile_phone', 'Phone')} *</label>
                   <input
                     type="tel"
                     required
@@ -244,13 +254,13 @@ export const PartnersPage: React.FC<PartnersPageProps> = ({ onCreateDispatchWith
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">{t('partner.address', 'Delivery Dock Address')} *</label>
+                <label className="block text-slate-300 font-semibold mb-1">{t('table.address', 'Delivery Dock Address')} *</label>
                 <textarea
                   required
                   rows={2}
                   value={deliveryAddress}
                   onChange={(e) => setDeliveryAddress(e.target.value)}
-                  placeholder="Street Address, Receiving Dock, City, State, Zip"
+                  placeholder={t('ptn.placeholder_address', 'Street Address, Receiving Dock, City, State, Zip')}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white"
                 />
               </div>
@@ -268,7 +278,7 @@ export const PartnersPage: React.FC<PartnersPageProps> = ({ onCreateDispatchWith
                   disabled={isSubmitting}
                   className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl"
                 >
-                  {isSubmitting ? t('common.loading', 'Saving...') : t('partner.create_btn', 'Register Partner')}
+                  {isSubmitting ? t('auth.submitting', 'Saving...') : t('auth.complete_enrollment', 'Register Partner')}
                 </button>
               </div>
             </form>

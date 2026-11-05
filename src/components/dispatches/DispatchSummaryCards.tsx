@@ -12,6 +12,7 @@ import {
   Area,
   BarChart,
   Bar,
+  XAxis,
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
@@ -47,33 +48,33 @@ export const DispatchSummaryCards: React.FC<DispatchSummaryCardsProps> = ({ disp
 
   // Trend Data for Recharts Visualizations
   const pendingTrendData = [
-    { day: 'Mon', count: Math.max(1, Math.round(pendingCount * 0.5)) },
-    { day: 'Tue', count: Math.max(2, Math.round(pendingCount * 0.7)) },
-    { day: 'Wed', count: Math.max(2, Math.round(pendingCount * 0.6)) },
-    { day: 'Thu', count: Math.max(3, Math.round(pendingCount * 0.85)) },
-    { day: 'Fri', count: Math.max(3, Math.round(pendingCount * 0.9)) },
-    { day: 'Sat', count: Math.max(2, Math.round(pendingCount * 0.95)) },
-    { day: 'Today', count: pendingCount },
+    { day: t('day.mon'), count: Math.max(1, Math.round(pendingCount * 0.5)) },
+    { day: t('day.tue'), count: Math.max(2, Math.round(pendingCount * 0.7)) },
+    { day: t('day.wed'), count: Math.max(2, Math.round(pendingCount * 0.6)) },
+    { day: t('day.thu'), count: Math.max(3, Math.round(pendingCount * 0.85)) },
+    { day: t('day.fri'), count: Math.max(3, Math.round(pendingCount * 0.9)) },
+    { day: t('day.sat'), count: Math.max(2, Math.round(pendingCount * 0.95)) },
+    { day: t('day.today'), count: pendingCount },
   ];
 
   const valueTrendData = [
-    { day: 'Mon', value: Math.round(totalValueInTransit * 0.45) },
-    { day: 'Tue', value: Math.round(totalValueInTransit * 0.6) },
-    { day: 'Wed', value: Math.round(totalValueInTransit * 0.55) },
-    { day: 'Thu', value: Math.round(totalValueInTransit * 0.75) },
-    { day: 'Fri', value: Math.round(totalValueInTransit * 0.88) },
-    { day: 'Sat', value: Math.round(totalValueInTransit * 0.92) },
-    { day: 'Today', value: totalValueInTransit },
+    { day: t('day.mon'), value: Math.round(totalValueInTransit * 0.45) },
+    { day: t('day.tue'), value: Math.round(totalValueInTransit * 0.6) },
+    { day: t('day.wed'), value: Math.round(totalValueInTransit * 0.55) },
+    { day: t('day.thu'), value: Math.round(totalValueInTransit * 0.75) },
+    { day: t('day.fri'), value: Math.round(totalValueInTransit * 0.88) },
+    { day: t('day.sat'), value: Math.round(totalValueInTransit * 0.92) },
+    { day: t('day.today'), value: totalValueInTransit },
   ];
 
   const completedTrendData = [
-    { day: 'Mon', completed: Math.max(1, Math.round(completedCount * 0.3)) },
-    { day: 'Tue', completed: Math.max(1, Math.round(completedCount * 0.5)) },
-    { day: 'Wed', completed: Math.max(2, Math.round(completedCount * 0.6)) },
-    { day: 'Thu', completed: Math.max(2, Math.round(completedCount * 0.75)) },
-    { day: 'Fri', completed: Math.max(3, Math.round(completedCount * 0.85)) },
-    { day: 'Sat', completed: Math.max(3, Math.round(completedCount * 0.9)) },
-    { day: 'Today', completed: completedCount },
+    { day: t('day.mon'), completed: Math.max(1, Math.round(completedCount * 0.3)) },
+    { day: t('day.tue'), completed: Math.max(1, Math.round(completedCount * 0.5)) },
+    { day: t('day.wed'), completed: Math.max(2, Math.round(completedCount * 0.6)) },
+    { day: t('day.thu'), completed: Math.max(2, Math.round(completedCount * 0.75)) },
+    { day: t('day.fri'), completed: Math.max(3, Math.round(completedCount * 0.85)) },
+    { day: t('day.sat'), completed: Math.max(3, Math.round(completedCount * 0.9)) },
+    { day: t('day.today'), completed: completedCount },
   ];
 
   return (
@@ -87,12 +88,12 @@ export const DispatchSummaryCards: React.FC<DispatchSummaryCardsProps> = ({ disp
                 <Truck className="w-4 h-4" />
               </div>
               <div>
-                <span className="text-xs font-medium text-slate-400">{t('metric.recent_dispatches', 'Shipments Status')}</span>
-                <h3 className="text-sm font-bold text-white">{t('metric.pending_deliveries', 'Pending Deliveries')}</h3>
+                <span className="text-xs font-medium text-slate-400">{t('metric.shipments_status')}</span>
+                <h3 className="text-sm font-bold text-white">{t('metric.pending_deliveries')}</h3>
               </div>
             </div>
             <span className="flex items-center gap-1 text-[11px] font-semibold text-sky-400 bg-sky-950/60 border border-sky-800 px-2 py-0.5 rounded-full">
-              <Clock className="w-3 h-3" /> {t('common.active', 'Active')}
+              <Clock className="w-3 h-3" /> {t('status.active')}
             </span>
           </div>
 
@@ -100,10 +101,10 @@ export const DispatchSummaryCards: React.FC<DispatchSummaryCardsProps> = ({ disp
             <div className="text-xl sm:text-2xl font-extrabold text-white font-mono">
               {pendingCount}{' '}
               <span className="text-xs font-normal text-slate-400 font-sans">
-                {t('dispatch.dispatches_text', 'manifests')}
+                {t('metric.manifests')}
               </span>
             </div>
-            <div className="text-[11px] text-slate-400">{t('metric.lead_times', '7-day volume trend')}</div>
+            <div className="text-[11px] text-slate-400">{t('metric.seven_day_trend')}</div>
           </div>
         </div>
 
@@ -117,6 +118,7 @@ export const DispatchSummaryCards: React.FC<DispatchSummaryCardsProps> = ({ disp
                   <stop offset="95%" stopColor="#38bdf8" stopOpacity={0.0} />
                 </linearGradient>
               </defs>
+              <XAxis dataKey="day" hide />
               <Tooltip
                 contentStyle={{
                   backgroundColor: '#0f172a',
@@ -129,7 +131,7 @@ export const DispatchSummaryCards: React.FC<DispatchSummaryCardsProps> = ({ disp
               <Area
                 type="monotone"
                 dataKey="count"
-                name="Pending"
+                name={t('status.pending')}
                 stroke="#38bdf8"
                 strokeWidth={2}
                 fillOpacity={1}
@@ -149,12 +151,12 @@ export const DispatchSummaryCards: React.FC<DispatchSummaryCardsProps> = ({ disp
                 <DollarSign className="w-4 h-4" />
               </div>
               <div>
-                <span className="text-xs font-medium text-slate-400">{t('table.reconciliation_outcome', 'Cargo Exposure')}</span>
-                <h3 className="text-sm font-bold text-white">{t('metric.total_value_transit', 'Total Value in Transit')}</h3>
+                <span className="text-xs font-medium text-slate-400">{t('metric.cargo_exposure')}</span>
+                <h3 className="text-sm font-bold text-white">{t('metric.total_value_transit')}</h3>
               </div>
             </div>
             <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded-full">
-              <ArrowUpRight className="w-3 h-3" /> {t('common.verified', 'Insured')}
+              <ArrowUpRight className="w-3 h-3" /> {t('metric.insured')}
             </span>
           </div>
 
@@ -162,7 +164,7 @@ export const DispatchSummaryCards: React.FC<DispatchSummaryCardsProps> = ({ disp
             <div className="text-xl sm:text-2xl font-extrabold text-emerald-400 font-mono tracking-tight">
               ${totalValueInTransit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
-            <div className="text-[11px] text-slate-400">{t('metric.waybill_valuation', 'Waybill valuation')}</div>
+            <div className="text-[11px] text-slate-400">{t('metric.waybill_valuation')}</div>
           </div>
         </div>
 
@@ -170,8 +172,9 @@ export const DispatchSummaryCards: React.FC<DispatchSummaryCardsProps> = ({ disp
         <div className="h-14 w-full mt-1">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={valueTrendData}>
+              <XAxis dataKey="day" hide />
               <Tooltip
-                formatter={(val: any) => [`$${Number(val).toLocaleString()}`, 'Value']}
+                formatter={(val: any) => [`$${Number(val).toLocaleString()}`, t('metric.total_value_transit')]}
                 contentStyle={{
                   backgroundColor: '#0f172a',
                   borderColor: '#334155',
@@ -195,12 +198,12 @@ export const DispatchSummaryCards: React.FC<DispatchSummaryCardsProps> = ({ disp
                 <CheckCircle2 className="w-4 h-4" />
               </div>
               <div>
-                <span className="text-xs font-medium text-slate-400">{t('table.reconciliation_outcome', 'Reconciliation Cycle')}</span>
-                <h3 className="text-sm font-bold text-white">{t('metric.completed_today', 'Completed Today')}</h3>
+                <span className="text-xs font-medium text-slate-400">{t('metric.reconciliation_cycle')}</span>
+                <h3 className="text-sm font-bold text-white">{t('metric.completed_today')}</h3>
               </div>
             </div>
             <span className="flex items-center gap-1 text-[11px] font-semibold text-purple-400 bg-purple-950/60 border border-purple-800 px-2 py-0.5 rounded-full">
-              <TrendingUp className="w-3 h-3" /> {t('status.reconciled', 'Reconciled')}
+              <TrendingUp className="w-3 h-3" /> {t('metric.reconciled_tag')}
             </span>
           </div>
 
@@ -208,10 +211,10 @@ export const DispatchSummaryCards: React.FC<DispatchSummaryCardsProps> = ({ disp
             <div className="text-xl sm:text-2xl font-extrabold text-purple-300 font-mono">
               {completedCount}{' '}
               <span className="text-xs font-normal text-slate-400 font-sans">
-                {t('table.items', 'receipts signed')}
+                {t('metric.receipts_signed')}
               </span>
             </div>
-            <div className="text-[11px] text-slate-400">{t('metric.success_rate', 'Clean dock handovers')}</div>
+            <div className="text-[11px] text-slate-400">{t('metric.clean_dock_handovers')}</div>
           </div>
         </div>
 
@@ -225,6 +228,7 @@ export const DispatchSummaryCards: React.FC<DispatchSummaryCardsProps> = ({ disp
                   <stop offset="95%" stopColor="#c084fc" stopOpacity={0.0} />
                 </linearGradient>
               </defs>
+              <XAxis dataKey="day" hide />
               <Tooltip
                 contentStyle={{
                   backgroundColor: '#0f172a',
@@ -237,7 +241,7 @@ export const DispatchSummaryCards: React.FC<DispatchSummaryCardsProps> = ({ disp
               <Area
                 type="monotone"
                 dataKey="completed"
-                name="Completed"
+                name={t('status.completed', 'Completed')}
                 stroke="#c084fc"
                 strokeWidth={2}
                 fillOpacity={1}

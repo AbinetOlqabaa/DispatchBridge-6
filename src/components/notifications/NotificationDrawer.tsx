@@ -25,9 +25,9 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
   onClose,
   onSelectDispatch,
 }) => {
-  const { t } = useTranslation();
   const { notifications, unreadNotifsCount, markNotificationAsRead, markAllNotificationsAsRead } =
     useAuth();
+  const { t } = useTranslation();
 
   if (!isOpen) return null;
 
@@ -53,10 +53,10 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
         <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bell className="w-5 h-5 text-indigo-400" />
-            <h2 className="text-base font-bold text-white">{t('notification.title', 'Notifications')}</h2>
+            <h2 className="text-base font-bold text-white">{t('nav.notifications', 'Notifications')}</h2>
             {unreadNotifsCount > 0 && (
               <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-600 text-white">
-                {unreadNotifsCount} new
+                {t('notif.unread_count', { count: unreadNotifsCount })}
               </span>
             )}
           </div>
@@ -65,16 +65,16 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
               <button
                 onClick={markAllNotificationsAsRead}
                 className="text-xs text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1 cursor-pointer"
-                title={t('notification.mark_all_read', 'Mark all read')}
+                title={t('notif.mark_all_read', 'Mark all as read')}
               >
                 <CheckCheck className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{t('notification.mark_all_read', 'Mark all read')}</span>
+                <span className="hidden sm:inline">{t('notif.mark_all_read', 'Mark all read')}</span>
               </button>
             )}
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
-              aria-label={t('common.close', 'Close')}
+              aria-label="Close notifications"
             >
               <X className="w-5 h-5" />
             </button>
@@ -86,7 +86,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
           {notifications.length === 0 ? (
             <div className="p-8 text-center text-slate-500 text-xs">
               <Bell className="w-8 h-8 mx-auto mb-2 opacity-40" />
-              {t('notification.empty_desc', 'No notifications yet. Activity alerts will appear here.')}
+              {t('notif.empty_desc', 'No notifications yet. Activity alerts will appear here.')}
             </div>
           ) : (
             notifications.map((notif) => (
@@ -109,12 +109,12 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-1">
-                    <span className="text-xs font-semibold text-white truncate">{notif.title}</span>
+                    <span className="text-xs font-semibold text-white truncate">{t(notif.title)}</span>
                     <span className="text-[10px] text-slate-500 shrink-0">
                       {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-300 mt-0.5 line-clamp-2">{notif.message}</p>
+                  <p className="text-xs text-slate-300 mt-0.5 line-clamp-2">{t(notif.message)}</p>
 
                   <div className="flex items-center gap-2 mt-2">
                     {notif.dispatchNumber && (
@@ -122,7 +122,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                         {notif.dispatchNumber}
                       </span>
                     )}
-                    <span className="text-[10px] text-slate-400">Channel: {notif.channel}</span>
+                    <span className="text-[10px] text-slate-400">{t('notif.channel_label', { channel: notif.channel })}</span>
                     <span className="text-[10px] text-emerald-400 font-medium ml-auto">
                       {notif.status}
                     </span>

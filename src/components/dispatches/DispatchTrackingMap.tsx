@@ -32,13 +32,9 @@ import { useTranslation } from '../../context/LanguageContext.js';
 import {
   saveMapCache,
   getMapCache,
-  isMapCached,
-  clearMapCache,
-  queueOfflineTelemetry,
-  getOfflineTelemetryQueue,
-  clearOfflineTelemetryQueue,
   CachedMapRecord,
 } from '../../utils/mapCache.js';
+import { useOfflineSync } from '../../utils/offlineSync.js';
 
 interface DispatchTrackingMapProps {
   dispatch: Dispatch;
@@ -79,11 +75,8 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
   const [isSimulatingPing, setIsSimulatingPing] = useState(false);
   const [pingSuccessMsg, setPingSuccessMsg] = useState<string | null>(null);
 
-  // Offline Caching & Network State
-  const [isSimulatedOffline, setIsSimulatedOffline] = useState(false);
-  const [isBrowserOnline, setIsBrowserOnline] = useState(
-    typeof navigator !== 'undefined' ? navigator.onLine : true
-  );
+  // Offline Caching & Unified Local-First Network State
+  const { isOnline, isSimulatedOffline, setSimulatedOffline } = useOfflineSync();
   const [cachedRecord, setCachedRecord] = useState<CachedMapRecord | null>(null);
   const [cacheNotification, setCacheNotification] = useState<string | null>(null);
 
@@ -92,31 +85,17 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
   const [showActualRoute, setShowActualRoute] = useState(true);
   const [showBreadcrumbs, setShowBreadcrumbs] = useState(true);
 
-  // Listen to native online/offline window events
   useEffect(() => {
-    const handleOnline = () => setIsBrowserOnline(true);
-    const handleOffline = () => setIsBrowserOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    // Initial check of local map cache
     const existing = getMapCache(dispatch.id);
     if (existing) {
       setCachedRecord(existing);
     } else {
-      // Auto-cache on initial mount to ensure offline availability
       const saved = saveMapCache(dispatch);
       setCachedRecord(saved);
     }
+  }, [dispatch.id, dispatch.status, dispatch.updatedAt]);
 
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [dispatch.id]);
-
-  const isEffectivelyOffline = !isBrowserOnline || isSimulatedOffline;
+  const isEffectivelyOffline = !isOnline || isSimulatedOffline;
 
   // 1. Resolve Origin Coordinates (with offline cache fallback)
   const originCoords = useMemo(() => {
@@ -161,7 +140,7 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
         updatedAt: cachedRecord.currentCoordinates.updatedAt || cachedRecord.cachedAt,
         speedKmh: cachedRecord.currentCoordinates.speedKmh ?? 80,
         heading: cachedRecord.currentCoordinates.heading ?? 310,
-        checkpointName: cachedRecord.currentCoordinates.checkpointName || 'Offline Waypoint Cache',
+        checkpointName: t(cachedRecord.currentCoordinates.checkpointName || '') || t('map.offline_waypoint_cache'),
         source: 'CHECKPOINT' as const,
       };
     }
@@ -172,7 +151,7 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
         updatedAt: dispatch.currentCoordinates.updatedAt || dispatch.updatedAt,
         speedKmh: dispatch.currentCoordinates.speedKmh ?? (dispatch.status === 'IN_TRANSIT' ? 84 : 0),
         heading: dispatch.currentCoordinates.heading ?? 315,
-        checkpointName: dispatch.currentCoordinates.checkpointName || 'Active Transit Corridor',
+        checkpointName: t(dispatch.currentCoordinates.checkpointName || '') || t('map.active_transit_corridor'),
         source: dispatch.currentCoordinates.source || 'GPS',
       };
     }
@@ -183,7 +162,7 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
         updatedAt: dispatch.receivedAt || dispatch.updatedAt,
         speedKmh: 0,
         heading: 0,
-        checkpointName: `${dispatch.partnerName} Receiving Dock`,
+        checkpointName: `${t(dispatch.partnerName)} (${t('map.dest_terminal_pin')})`,
         source: 'CHECKPOINT' as const,
       };
     }
@@ -193,10 +172,10 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
       updatedAt: dispatch.dispatchedAt,
       speedKmh: 0,
       heading: 0,
-      checkpointName: dispatch.originLocationSnapshot?.label || 'Dispatch Dock',
+      checkpointName: t(dispatch.originLocationSnapshot?.label || '') || t('map.origin_dock_pin'),
       source: 'CHECKPOINT' as const,
     };
-  }, [dispatch, originCoords, destCoords, isEffectivelyOffline, cachedRecord]);
+  }, [dispatch, originCoords, destCoords, isEffectivelyOffline, cachedRecord, t]);
 
   // 4. Resolve Planned Waypoints
   const plannedWaypoints: RouteWaypoint[] = useMemo(() => {
@@ -358,11 +337,11 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
   const handlePrecacheRoute = () => {
     const saved = saveMapCache(dispatch);
     setCachedRecord(saved);
-    setCacheNotification(`Route & tile grid cached offline (${(saved.sizeBytes / 1024).toFixed(1)} KB). Available without signal.`);
+    setCacheNotification(t('map.cache_saved_toast', { size: (saved.sizeBytes / 1024).toFixed(1) }));
     setTimeout(() => setCacheNotification(null), 4000);
   };
 
-  // Live GPS Telemetry Simulation Action
+  // Live GPS Telemetry Simulation Action (persists to IndexedDB outbox when offline & auto-syncs on reconnect)
   const handleSimulateGpsPing = async () => {
     setIsSimulatingPing(true);
     setPingSuccessMsg(null);
@@ -371,53 +350,38 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
       const nextLat = currentCoords.lat + (destCoords.lat - currentCoords.lat) * advanceFraction;
       const nextLng = currentCoords.lng + (destCoords.lng - currentCoords.lng) * advanceFraction;
       const newSpeed = Math.floor(75 + Math.random() * 20);
-      const nextWaypointName = `En Route Waypoint Mile ${(coveredDistanceKm + 45).toFixed(0)}`;
+      const nextWaypointName = `${t('map.waypoints')} ${(coveredDistanceKm + 45).toFixed(0)} km`;
+
+      const updated = await api.updateDispatchTelemetry(dispatch.id, {
+        latitude: parseFloat(nextLat.toFixed(5)),
+        longitude: parseFloat(nextLng.toFixed(5)),
+        speedKmh: newSpeed,
+        heading: 310,
+        checkpointName: nextWaypointName,
+        source: 'GPS',
+      });
+
+      const saved = saveMapCache(updated);
+      setCachedRecord(saved);
+
+      if (onTelemetryUpdate) {
+        onTelemetryUpdate(updated);
+      }
 
       if (isEffectivelyOffline) {
-        // Queue locally when offline
-        queueOfflineTelemetry(dispatch.id, {
-          latitude: parseFloat(nextLat.toFixed(5)),
-          longitude: parseFloat(nextLng.toFixed(5)),
-          speedKmh: newSpeed,
-          heading: 310,
-          checkpointName: nextWaypointName,
-          source: 'GPS',
-        });
-
-        // Update local cache directly
-        const updatedOffline: Dispatch = {
-          ...dispatch,
-          status: 'IN_TRANSIT',
-          currentCoordinates: {
-            latitude: parseFloat(nextLat.toFixed(5)),
-            longitude: parseFloat(nextLng.toFixed(5)),
-            speedKmh: newSpeed,
-            heading: 310,
-            checkpointName: nextWaypointName,
-            source: 'GPS',
-            updatedAt: new Date().toISOString(),
-          },
-        };
-        const saved = saveMapCache(updatedOffline);
-        setCachedRecord(saved);
-        setPingSuccessMsg(`Offline waypoint queued locally: ${nextLat.toFixed(4)}° N, ${Math.abs(nextLng).toFixed(4)}° W (will sync upon reconnection).`);
+        setPingSuccessMsg(
+          t('map.ping_offline_queued', {
+            lat: nextLat.toFixed(4),
+            lng: Math.abs(nextLng).toFixed(4),
+          })
+        );
       } else {
-        const updated = await api.updateDispatchTelemetry(dispatch.id, {
-          latitude: parseFloat(nextLat.toFixed(5)),
-          longitude: parseFloat(nextLng.toFixed(5)),
-          speedKmh: newSpeed,
-          heading: 310,
-          checkpointName: nextWaypointName,
-          source: 'GPS',
-        });
-
-        saveMapCache(updated);
-        setCachedRecord(getMapCache(updated.id));
-
-        if (onTelemetryUpdate) {
-          onTelemetryUpdate(updated);
-        }
-        setPingSuccessMsg(`Telemetry GPS ping recorded: ${nextLat.toFixed(4)}° N, ${Math.abs(nextLng).toFixed(4)}° W`);
+        setPingSuccessMsg(
+          t('map.ping_recorded_toast', {
+            lat: nextLat.toFixed(4),
+            lng: Math.abs(nextLng).toFixed(4),
+          })
+        );
       }
       setTimeout(() => setPingSuccessMsg(null), 4000);
     } catch (err: any) {
@@ -437,11 +401,13 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
           <div className="flex items-center gap-2">
             <WifiOff className="w-4 h-4 text-amber-400 shrink-0" />
             <span className="font-semibold">
-              Operating in Offline Transit Mode • Using Cached Coordinate Data & Offline Map Canvas
+              {t('map.offline_transit_mode', 'Operating in Offline Transit Mode • Using Cached Coordinate Data & Offline Map Canvas')}
             </span>
           </div>
           <span className="text-[11px] bg-amber-900/60 px-2 py-0.5 rounded border border-amber-700/60 font-mono">
-            Cache Hit: {cachedRecord ? `${(cachedRecord.sizeBytes / 1024).toFixed(1)} KB` : 'Local Grid'}
+            {t('map.cache_hit', 'Cache Hit: {size}', {
+              size: cachedRecord ? `${(cachedRecord.sizeBytes / 1024).toFixed(1)} KB` : t('map.local_grid', 'Local Grid'),
+            })}
           </span>
         </div>
       )}
@@ -460,27 +426,31 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
           <div className="flex flex-wrap items-center gap-2">
             <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-sky-950 text-sky-400 border border-sky-800/80">
               <Radio className="w-3 h-3 text-sky-400 animate-pulse" />
-              Live Telemetry & Geo-Coordinates
+              {t('map.live_telemetry_badge', 'Live Telemetry & Geo-Coordinates')}
             </span>
 
             {/* Offline Cache Status Badge */}
             <span className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
               <Database className="w-3 h-3 text-emerald-400" />
-              {cachedRecord ? `Cached Offline (${(cachedRecord.sizeBytes / 1024).toFixed(1)} KB)` : 'Uncached'}
+              {cachedRecord
+                ? t('map.cached_offline_badge', 'Cached Offline ({size})', {
+                    size: `${(cachedRecord.sizeBytes / 1024).toFixed(1)} KB`,
+                  })
+                : t('map.uncached', 'Uncached')}
             </span>
 
             {/* Network Status Toggle */}
             <button
-              onClick={() => setIsSimulatedOffline(!isSimulatedOffline)}
-              className={`flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded cursor-pointer transition-colors ${
+              onClick={() => setSimulatedOffline(!isSimulatedOffline)}
+              className={`flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg cursor-pointer transition-colors ${
                 isSimulatedOffline
                   ? 'bg-amber-950 text-amber-300 border border-amber-800'
                   : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
               }`}
-              title="Toggle simulated low-signal/offline transit mode"
+              title={t('map.toggle_offline_title', 'Toggle simulated low-signal/offline transit mode')}
             >
               {isSimulatedOffline ? <WifiOff className="w-3 h-3 text-amber-400" /> : <Wifi className="w-3 h-3 text-emerald-400" />}
-              <span>{isSimulatedOffline ? 'Simulating Offline' : 'Online Connection'}</span>
+              <span>{isSimulatedOffline ? t('map.simulating_offline_btn', 'Simulating Offline') : t('map.online_conn_btn', 'Online Connection')}</span>
             </button>
           </div>
 
@@ -501,10 +471,10 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
           <button
             onClick={handlePrecacheRoute}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold cursor-pointer transition-colors"
-            title="Pre-cache map tiles, waypoints and vector paths for offline transit"
+            title={t('map.precache_title', 'Pre-cache map tiles, waypoints and vector paths for offline transit')}
           >
             <Database className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Pre-cache Route</span>
+            <span>{t('map.precache')}</span>
           </button>
 
           {/* Simulate Ping Button */}
@@ -513,10 +483,10 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
               onClick={handleSimulateGpsPing}
               disabled={isSimulatingPing}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-950/70 hover:bg-sky-900 text-sky-300 border border-sky-800/60 text-xs font-semibold cursor-pointer transition-colors"
-              title={t('tracking.simulate_ping', 'Record next live GPS telemetry waypoint')}
+              title={t('map.record_telemetry_title', 'Record next live GPS telemetry waypoint')}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSimulatingPing ? 'animate-spin' : ''}`} />
-              <span>{isSimulatingPing ? t('common.loading', 'Pinging...') : t('tracking.simulate_ping', 'Simulate GPS Ping')}</span>
+              <span>{isSimulatingPing ? t('map.pinging') : t('map.simulate_ping')}</span>
             </button>
           )}
 
@@ -524,17 +494,17 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
           <button
             onClick={handleCopyCoordinates}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold cursor-pointer transition-colors"
-            title={t('tracking.copy_coords', 'Copy latitude and longitude coordinates')}
+            title={t('map.copy_coords_title', 'Copy latitude and longitude coordinates')}
           >
             {copiedCoords ? (
               <>
                 <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-400">{t('tracking.coords_copied', 'Copied')}</span>
+                <span className="text-emerald-400">{t('action.copied')}</span>
               </>
             ) : (
               <>
                 <Copy className="w-3.5 h-3.5 text-slate-400" />
-                <span>{t('tracking.copy_coords', 'Copy Lat/Lng')}</span>
+                <span>{t('map.copy_coords')}</span>
               </>
             )}
           </button>
@@ -545,10 +515,10 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-semibold cursor-pointer transition-colors"
-            title={t('tracking.open_maps', 'View exact geo-coordinates on Google Maps')}
+            title={t('map.view_gmaps_title', 'View exact geo-coordinates on Google Maps')}
           >
             <ExternalLink className="w-3.5 h-3.5 text-indigo-400" />
-            <span>{t('tracking.open_maps', 'Open in Maps')}</span>
+            <span>{t('map.open_in_maps')}</span>
           </a>
         </div>
       </div>
@@ -566,7 +536,7 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
         {/* Layer Toggles */}
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-slate-500 font-semibold text-[11px] uppercase tracking-wider flex items-center gap-1">
-            <Layers className="w-3 h-3 text-slate-400" /> Polyline Layers:
+            <Layers className="w-3 h-3 text-slate-400" /> {t('map.polyline_layers')}
           </span>
 
           {/* Toggle Planned Polyline */}
@@ -579,7 +549,7 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
             }`}
           >
             <span className="w-3 h-0.5 bg-indigo-400 inline-block border-b border-dashed border-indigo-300" />
-            <span>Planned Corridor ({plannedWaypoints.length} pts)</span>
+            <span>{t('map.planned_corridor', { count: plannedWaypoints.length })}</span>
           </button>
 
           {/* Toggle Actual Polyline */}
@@ -592,7 +562,7 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
             }`}
           >
             <span className="w-3 h-1 bg-cyan-400 inline-block rounded-full shadow" />
-            <span>Actual Route ({actualWaypoints.length} recorded)</span>
+            <span>{t('map.actual_route', { count: actualWaypoints.length })}</span>
           </button>
 
           {/* Toggle Breadcrumbs */}
@@ -605,16 +575,16 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
             }`}
           >
             <History className="w-3 h-3 text-sky-400" />
-            <span>Waypoints</span>
+            <span>{t('map.waypoints')}</span>
           </button>
         </div>
 
         {/* Corridor Variance Indicator */}
         <div className="flex items-center gap-2 text-[11px] font-mono text-slate-400">
-          <span className="text-slate-500">Corridor Variance:</span>
+          <span className="text-slate-500">{t('map.corridor_variance')}</span>
           <span className="text-emerald-400 font-semibold">{corridorVarianceKm.toFixed(1)} km</span>
           <span className="text-slate-500">•</span>
-          <span className="text-slate-300">98.4% Adherence</span>
+          <span className="text-slate-300">{t('map.adherence')}</span>
         </div>
       </div>
 
@@ -770,7 +740,7 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
                 id: 'origin_pin',
                 latitude: originCoords.lat,
                 longitude: originCoords.lng,
-                label: dispatch.originLocationSnapshot?.label || 'Origin Loading Terminal',
+                label: dispatch.originLocationSnapshot?.label || t('dispatch.origin_terminal', 'Origin Loading Terminal'),
               })
             }
           >
@@ -781,7 +751,7 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
               textAnchor="middle"
               className="fill-slate-300 font-sans font-semibold text-[11px] drop-shadow"
             >
-              {dispatch.originLocationSnapshot?.label || 'Origin Dock'}
+              {t(dispatch.originLocationSnapshot?.label || '') || t('map.origin_dock_pin', 'Origin Dock')}
             </text>
           </g>
 
@@ -794,7 +764,7 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
                 id: 'dest_pin',
                 latitude: destCoords.lat,
                 longitude: destCoords.lng,
-                label: dispatch.destinationSnapshot?.partnerName || 'Destination Terminal',
+                label: t(dispatch.destinationSnapshot?.partnerName || '') || t('map.dest_terminal_pin', 'Destination Terminal'),
               })
             }
           >
@@ -805,7 +775,7 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
               textAnchor="middle"
               className="fill-emerald-300 font-sans font-semibold text-[11px] drop-shadow"
             >
-              {dispatch.partnerName}
+              {t(dispatch.partnerName)}
             </text>
           </g>
 
@@ -818,7 +788,7 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
                 id: 'vehicle_pin',
                 latitude: currentCoords.lat,
                 longitude: currentCoords.lng,
-                label: `Current GPS: ${currentCoords.checkpointName}`,
+                label: `${t('map.current_gps', 'Current GPS:')} ${currentCoords.checkpointName}`,
                 speedKmh: currentCoords.speedKmh,
                 timestamp: currentCoords.updatedAt,
               })
@@ -827,21 +797,8 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
             {/* Animated Radar Pulse Rings */}
             {!isDelivered && (
               <>
-                <circle r="26" fill="#38bdf8" opacity="0.25">
-                  <animate
-                    attributeName="r"
-                    values="16;42"
-                    dur="2.2s"
-                    repeatCount="indefinite"
-                  />
-                  <animate
-                    attributeName="opacity"
-                    values="0.5;0"
-                    dur="2.2s"
-                    repeatCount="indefinite"
-                  />
-                </circle>
-                <circle r="18" fill="#0284c7" opacity="0.4" />
+                <circle r="24" fill="#38bdf8" opacity="0.28" className="animate-ping origin-center" />
+                <circle r="21" fill="#0284c7" opacity="0.35" />
               </>
             )}
 
@@ -878,7 +835,7 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
             <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-1">
               <span className="font-semibold text-sky-300 flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 text-sky-400" />
-                Waypoint Inspection
+                {t('map.waypoint_inspection')}
               </span>
               <button
                 onClick={() => setActiveWaypointTooltip(null)}
@@ -887,18 +844,18 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
                 ×
               </button>
             </div>
-            <div className="font-medium text-white">{activeWaypointTooltip.label}</div>
+            <div className="font-medium text-white">{t(activeWaypointTooltip.label || '')}</div>
             <div className="text-[11px] font-mono text-slate-300">
               {activeWaypointTooltip.latitude.toFixed(5)}° N, {Math.abs(activeWaypointTooltip.longitude).toFixed(5)}° W
             </div>
             {activeWaypointTooltip.speedKmh !== undefined && (
               <div className="text-[11px] text-slate-400">
-                Speed: <span className="text-amber-400 font-mono">{activeWaypointTooltip.speedKmh} km/h</span>
+                {t('map.speed')}: <span className="text-amber-400 font-mono">{activeWaypointTooltip.speedKmh} km/h</span>
               </div>
             )}
             {activeWaypointTooltip.timestamp && (
               <div className="text-[10px] text-slate-500">
-                Timestamp: {new Date(activeWaypointTooltip.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                {t('system.timestamp')}: {new Date(activeWaypointTooltip.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </div>
             )}
           </div>
@@ -909,21 +866,21 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
           <button
             onClick={() => setZoomLevel((z) => Math.min(2.5, z + 0.35))}
             className="p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700 shadow-md cursor-pointer transition-colors"
-            title="Zoom In"
+            title={t('map.zoom_in')}
           >
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
             onClick={() => setZoomLevel((z) => Math.max(0.75, z - 0.35))}
             className="p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700 shadow-md cursor-pointer transition-colors"
-            title="Zoom Out"
+            title={t('map.zoom_out')}
           >
             <ZoomOut className="w-4 h-4" />
           </button>
           <button
             onClick={() => setZoomLevel(1)}
             className="p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700 shadow-md cursor-pointer transition-colors"
-            title="Reset to Fit Route Bounds"
+            title={t('map.fit_bounds')}
           >
             <Maximize2 className="w-4 h-4" />
           </button>
@@ -939,7 +896,7 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
               </span>
             </div>
             <span className="text-[10px] font-semibold uppercase tracking-wider text-sky-400 bg-sky-950 px-2 py-0.5 rounded-full border border-sky-800">
-              {progressPercentage}% Completed
+              {t('map.completed_progress', { progress: progressPercentage })}
             </span>
           </div>
 
@@ -947,7 +904,7 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
             <div>
               <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                <MapPin className="w-3 h-3 text-sky-400" /> Latitude
+                <MapPin className="w-3 h-3 text-sky-400" /> {t('map.latitude')}
               </div>
               <div className="font-mono font-semibold text-slate-200">
                 {currentCoords.lat.toFixed(5)}° N
@@ -956,7 +913,7 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
 
             <div>
               <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                <MapPin className="w-3 h-3 text-sky-400" /> Longitude
+                <MapPin className="w-3 h-3 text-sky-400" /> {t('map.longitude')}
               </div>
               <div className="font-mono font-semibold text-slate-200">
                 {Math.abs(currentCoords.lng).toFixed(5)}° W
@@ -965,7 +922,7 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
 
             <div>
               <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                <Gauge className="w-3 h-3 text-amber-400" /> {t('tracking.speed', 'Speed')}
+                <Gauge className="w-3 h-3 text-amber-400" /> {t('map.speed')}
               </div>
               <div className="font-mono font-semibold text-slate-200">
                 {currentCoords.speedKmh} km/h
@@ -974,7 +931,7 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
 
             <div>
               <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                <Compass className="w-3 h-3 text-indigo-400" /> {t('tracking.heading', 'Heading')}
+                <Compass className="w-3 h-3 text-indigo-400" /> {t('map.heading')}
               </div>
               <div className="font-mono font-semibold text-slate-200">
                 {headingToCardinal(currentCoords.heading)}
@@ -994,7 +951,10 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
               <span>{originCoords.lat.toFixed(4)}°, {originCoords.lng.toFixed(4)}°</span>
             </span>
             <span className="font-medium text-slate-300">
-              {coveredDistanceKm.toFixed(0)} km covered • {remainingDistanceKm.toFixed(0)} km remaining
+              {t('map.distance_covered_rem', '{covered} km covered • {remaining} km remaining', {
+                covered: coveredDistanceKm.toFixed(0),
+                remaining: remainingDistanceKm.toFixed(0),
+              })}
             </span>
             <span className="flex items-center gap-1">
               <Store className="w-3.5 h-3.5 text-emerald-400" />
@@ -1012,11 +972,13 @@ export const DispatchTrackingMap: React.FC<DispatchTrackingMapProps> = ({
           <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-400 pt-1">
             <div className="flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-slate-500" />
-              <span>Last GPS Ping: {new Date(currentCoords.updatedAt).toLocaleString()}</span>
+              <span>{t('map.last_gps_ping', 'Last GPS Ping: {time}', { time: new Date(currentCoords.updatedAt).toLocaleString() })}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-slate-500">Carrier:</span>
-              <span className="text-slate-300 font-medium">{dispatch.driverName || 'Designated Driver'} ({dispatch.driverPhone || 'Radio dispatched'})</span>
+              <span className="text-slate-500">{t('map.carrier_label', 'Carrier:')}</span>
+              <span className="text-slate-300 font-medium">
+                {dispatch.driverName || t('map.designated_driver', 'Designated Driver')} ({dispatch.driverPhone || t('map.radio_dispatched', 'Radio dispatched')})
+              </span>
             </div>
           </div>
         </div>

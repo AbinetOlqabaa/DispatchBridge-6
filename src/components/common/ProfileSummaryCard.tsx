@@ -1,4 +1,3 @@
-import React from 'react';
 import { User, Building, Smartphone, ShieldCheck, CheckCircle2, Shield } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.js';
 import { useTranslation } from '../../context/LanguageContext.js';
@@ -35,21 +34,6 @@ export const ProfileSummaryCard: React.FC<ProfileSummaryCardProps> = ({ onOpenPr
     }
   };
 
-  const getRoleLabel = () => {
-    switch (user.role) {
-      case 'SUPER_ADMIN':
-        return t('role.super_admin', 'Super Administrator');
-      case 'BUSINESS_OWNER':
-        return t('role.business_owner', 'Business Owner');
-      case 'SENDER':
-        return t('role.sender', 'Sender / Dispatcher');
-      case 'RECEIVER':
-        return t('role.receiver', 'Receiver / Partner');
-      default:
-        return user.role;
-    }
-  };
-
   return (
     <div
       className={`rounded-2xl border border-slate-800 bg-slate-900/70 backdrop-blur-sm p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm ${className}`}
@@ -71,7 +55,7 @@ export const ProfileSummaryCard: React.FC<ProfileSummaryCardProps> = ({ onOpenPr
           {user.phoneVerified && (
             <div
               className="absolute -bottom-1 -right-1 bg-emerald-500 text-white rounded-full p-0.5 border-2 border-slate-900"
-              title={t('auth.fayda_verified', 'Verified Identity')}
+              title={t('profile.verified_identity')}
             >
               <CheckCircle2 className="w-3 h-3" />
             </div>
@@ -81,22 +65,22 @@ export const ProfileSummaryCard: React.FC<ProfileSummaryCardProps> = ({ onOpenPr
         {/* User Identity Details (Safe: No Raw FAN/FIN) */}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-base font-bold text-white truncate">{user.name}</h2>
+            <h2 className="text-base font-bold text-white truncate">{t(user.name)}</h2>
             <span
               className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${getRoleBadgeColor()}`}
             >
-              {getRoleLabel()}
+              {t(`role.${user.role.toLowerCase()}`)}
             </span>
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
               <ShieldCheck className="w-2.5 h-2.5" />
-              <span>{t('auth.fayda_verified', 'Fayda Verified')}</span>
+              <span>{t('profile.fayda_verified')}</span>
             </span>
           </div>
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400 mt-1">
             <span className="flex items-center gap-1 truncate">
               <Building className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-              <span className="truncate">{user.businessName}</span>
+              <span className="truncate">{t(user.businessName)}</span>
             </span>
             <span className="flex items-center gap-1 font-mono text-slate-300">
               <Smartphone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
@@ -112,7 +96,7 @@ export const ProfileSummaryCard: React.FC<ProfileSummaryCardProps> = ({ onOpenPr
           onClick={onOpenProfile}
           className="self-stretch sm:self-auto px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition cursor-pointer shrink-0"
         >
-          {t('nav.manage_profile', 'Manage Profile')}
+          {t('profile.manage_profile')}
         </button>
       )}
     </div>

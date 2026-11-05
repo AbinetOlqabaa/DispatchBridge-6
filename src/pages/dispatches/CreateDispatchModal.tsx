@@ -13,16 +13,28 @@ import {
   ArrowRight,
   ArrowLeft,
   FileCheck,
+  ScanBarcode,
+  WifiOff,
+  Database,
 } from 'lucide-react';
 import { Location, Partner } from '../../types/dispatch.js';
 import { api } from '../../services/api.js';
 import { useTranslation } from '../../context/LanguageContext.js';
+import { BarcodeIntakeScanner } from '../../components/dispatches/BarcodeIntakeScanner.js';
+import { mergeScannedItemsIntoDispatchLines, ParsedIntakeItem } from '../../utils/barcodeParser.js';
+import { useOfflineSync } from '../../utils/offlineSync.js';
 
 interface CreateDispatchModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (dispatchId: string) => void;
   preselectedPartnerId?: string;
+  preselectedItem?: {
+    sku: string;
+    name: string;
+    unit: string;
+    unitPrice: number;
+  } | null;
 }
 
 export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
@@ -30,8 +42,10 @@ export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
   onClose,
   onSuccess,
   preselectedPartnerId,
+  preselectedItem,
 }) => {
   const { t } = useTranslation();
+  const { isOnline } = useOfflineSync();
   const [step, setStep] = useState<'input' | 'review'>('input');
   const [partners, setPartners] = useState<Partner[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -67,13 +81,26 @@ export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isScannerOpen, setIsScannerOpen] = useState(true);
+  const [highlightedSkus, setHighlightedSkus] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (isOpen) {
+      if (preselectedItem) {
+        setLines([
+          {
+            sku: preselectedItem.sku,
+            itemName: preselectedItem.name,
+            unit: preselectedItem.unit || 'cases',
+            unitPrice: preselectedItem.unitPrice || 0,
+            quantitySent: 10,
+          },
+        ]);
+      }
       loadData();
       setStep('input');
     }
-  }, [isOpen]);
+  }, [isOpen, preselectedPartnerId, preselectedItem]);
 
   const loadData = async () => {
     try {
@@ -86,12 +113,14 @@ export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
         setSelectedLocationId(defaultLoc.id);
       }
 
-      if (pData.length > 0 && !selectedPartnerId) {
+      const effectivePartnerId = preselectedPartnerId || selectedPartnerId;
+      if (effectivePartnerId) {
+        setSelectedPartnerId(effectivePartnerId);
+        const match = pData.find((p) => p.id === effectivePartnerId);
+        if (match) setDestinationAddress(match.deliveryAddress);
+      } else if (pData.length > 0) {
         setSelectedPartnerId(pData[0].id);
         setDestinationAddress(pData[0].deliveryAddress);
-      } else if (selectedPartnerId) {
-        const match = pData.find((p) => p.id === selectedPartnerId);
-        if (match) setDestinationAddress(match.deliveryAddress);
       }
     } catch (err) {
       console.error(err);
@@ -131,24 +160,51 @@ export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
     setLines(updated);
   };
 
+  const handleItemsScanned = (
+    scannedItems: ParsedIntakeItem[]
+  ): { addedCount: number; incrementedCount: number; totalUnitsAdded: number } => {
+    const res = mergeScannedItemsIntoDispatchLines(lines, scannedItems);
+    setLines(res.lines);
+    setErrorMessage(null);
+    const matched = new Set<string>(res.affectedSkus);
+    setHighlightedSkus(matched);
+    setTimeout(() => {
+      setHighlightedSkus((prev) => {
+        const next = new Set(prev);
+        matched.forEach((s) => next.delete(s));
+        return next;
+      });
+    }, 1800);
+    return {
+      addedCount: res.addedCount,
+      incrementedCount: res.incrementedCount,
+      totalUnitsAdded: res.totalUnitsAdded,
+    };
+  };
+
   const validateInput = (): boolean => {
     setErrorMessage(null);
     if (!selectedPartnerId) {
-      setErrorMessage('Please select a receiving partner.');
+      setErrorMessage(t('dispatch.err_select_partner', 'Please select a receiving partner.'));
       return false;
     }
     if (lines.length === 0) {
-      setErrorMessage('Please add at least one line item to the dispatch.');
+      setErrorMessage(t('dispatch.err_add_line', 'Please add at least one line item to the dispatch.'));
       return false;
     }
     for (let i = 0; i < lines.length; i++) {
       const l = lines[i];
       if (!l.itemName.trim()) {
-        setErrorMessage(`Item line #${i + 1} is missing a description.`);
+        setErrorMessage(t('dispatch.err_missing_desc', 'Item line #{index} is missing a description.', { index: i + 1 }));
         return false;
       }
       if (typeof l.quantitySent !== 'number' || isNaN(l.quantitySent) || l.quantitySent <= 0) {
-        setErrorMessage(`Item line #${i + 1} (${l.itemName}) must have quantity > 0.`);
+        setErrorMessage(
+          t('dispatch.err_quantity_invalid', 'Item line #{index} ({name}) must have quantity > 0.', {
+            index: i + 1,
+            name: l.itemName || `#${i + 1}`,
+          })
+        );
         return false;
       }
     }
@@ -218,7 +274,7 @@ export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
                   : 'bg-slate-800 text-slate-400'
               }`}
             >
-              <span>{t('create_dispatch.step1', '1. Manifest Details')}</span>
+              <span>{t('dispatch.step_manifest_details')}</span>
             </div>
             <ArrowRight className="w-3.5 h-3.5 text-slate-600" />
             <div
@@ -228,18 +284,30 @@ export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
                   : 'bg-slate-800 text-slate-400'
               }`}
             >
-              <span>{t('create_dispatch.step2', '2. Pre-Submission Review')}</span>
+              <span>{t('dispatch.step_review')}</span>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
-            aria-label={t('common.close', 'Close')}
+            className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
+            aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {!isOnline && (
+          <div className="mt-3 p-3 rounded-xl bg-amber-950/60 border border-amber-800/80 text-amber-200 text-xs flex items-center gap-2 shrink-0">
+            <WifiOff className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>
+              {t(
+                'dispatch.offline_queued',
+                'Offline Mode: New dispatch manifest will be stored locally in IndexedDB and synced automatically when online.'
+              )}
+            </span>
+          </div>
+        )}
 
         {errorMessage && (
           <div className="my-3 p-3 rounded-xl bg-rose-950/60 border border-rose-800/80 text-rose-300 text-xs flex items-center gap-2 shrink-0">
@@ -256,7 +324,7 @@ export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
                   <Warehouse className="w-3.5 h-3.5 text-indigo-400" />
-                  {t('create_dispatch.origin_dock', 'Origin Dispatch Terminal')} *
+                  {t('dispatch.origin_terminal_label')}
                 </label>
                 <select
                   value={selectedLocationId}
@@ -265,7 +333,7 @@ export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
                 >
                   {locations.map((loc) => (
                     <option key={loc.id} value={loc.id}>
-                      {loc.label} ({loc.city})
+                      {t(loc.label)} ({loc.city})
                     </option>
                   ))}
                 </select>
@@ -274,7 +342,7 @@ export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5 text-sky-400" />
-                  {t('create_dispatch.destination_partner', 'Destination Partner')} *
+                  {t('dispatch.dest_partner_label')}
                 </label>
                 <select
                   value={selectedPartnerId}
@@ -284,7 +352,7 @@ export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
                 >
                   {partners.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} ({p.type})
+                      {t(p.name)} ({t(`partner.type_${p.type.toLowerCase()}`, p.type)})
                     </option>
                   ))}
                 </select>
@@ -292,13 +360,13 @@ export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">{t('partner.address', 'Destination Address')} *</label>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">{t('dispatch.dest_address_label')}</label>
               <input
                 type="text"
                 required
                 value={destinationAddress}
                 onChange={(e) => setDestinationAddress(e.target.value)}
-                placeholder="Street address, Dock number, City"
+                placeholder={t('dispatch.placeholder_dest_address', 'Street address, Dock number, City')}
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white"
               />
             </div>
@@ -306,17 +374,17 @@ export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
             {/* Carrier info */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-800/40 p-3 rounded-xl border border-slate-800">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">{t('create_dispatch.driver_name', 'Driver Name')}</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">{t('dispatch.driver_name')}</label>
                 <input
                   type="text"
                   value={driverName}
                   onChange={(e) => setDriverName(e.target.value)}
-                  placeholder="e.g. Robert Lang"
+                  placeholder={t('dispatch.placeholder_driver_name', 'e.g. Robert Lang')}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">{t('create_dispatch.driver_phone', 'Driver Phone')}</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">{t('dispatch.driver_phone')}</label>
                 <input
                   type="tel"
                   value={driverPhone}
@@ -326,72 +394,104 @@ export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">{t('create_dispatch.vehicle_reg', 'Truck Plate')}</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">{t('dispatch.truck_plate')}</label>
                 <input
                   type="text"
                   value={vehicleReg}
                   onChange={(e) => setVehicleReg(e.target.value)}
-                  placeholder="TRK-4921"
+                  placeholder={t('dispatch.placeholder_vehicle_plate', 'TRK-4921')}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white"
                 />
               </div>
             </div>
 
-            {/* Itemized Lines */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
+            {/* Itemized Lines + Rapid Barcode / QR Intake Scanner */}
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
                   <Package className="w-3.5 h-3.5 text-indigo-400" />
-                  Cargo Line Items ({lines.length})
+                  {t('dispatch.line_items_title', { count: lines.length })}
                 </label>
-                <span className="text-xs font-mono text-indigo-300">Total Units: {totalUnits}</span>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xs font-mono text-indigo-300">{t('dispatch.total_units', { total: totalUnits })}</span>
+                  <button
+                    type="button"
+                    data-testid="toggle-barcode-intake-btn"
+                    onClick={() => setIsScannerOpen(!isScannerOpen)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border cursor-pointer transition-colors min-h-[44px] ${
+                      isScannerOpen
+                        ? 'bg-indigo-600/20 text-indigo-300 border-indigo-500/50 hover:bg-indigo-600/30'
+                        : 'bg-slate-800 text-sky-300 border-slate-700 hover:bg-slate-700'
+                    }`}
+                  >
+                    <ScanBarcode className="w-4 h-4 shrink-0" />
+                    <span>
+                      {isScannerOpen
+                        ? t('intake_scanner.hide_btn', 'Hide Scanner')
+                        : t('intake_scanner.open_btn', 'Scan Barcode / QR')}
+                    </span>
+                  </button>
+                </div>
               </div>
 
+              {isScannerOpen && (
+                <BarcodeIntakeScanner
+                  onItemsScanned={handleItemsScanned}
+                  onClose={() => setIsScannerOpen(false)}
+                />
+              )}
+
               <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                {lines.map((item, index) => (
+                {lines.map((item, index) => {
+                  const isHighlighted = highlightedSkus.has(item.sku.trim().toUpperCase());
+                  return (
                   <div
                     key={index}
-                    className="grid grid-cols-12 gap-2 bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60 items-center text-xs"
+                    className={`grid grid-cols-12 gap-2 p-2.5 rounded-xl border items-center text-xs transition-all ${
+                      isHighlighted
+                        ? 'bg-emerald-950/50 border-emerald-500 ring-2 ring-emerald-500/30'
+                        : 'bg-slate-800/60 border-slate-700/60'
+                    }`}
                   >
-                    <div className="col-span-2">
+                    <div className="col-span-4 sm:col-span-2">
                       <input
                         type="text"
                         value={item.sku}
                         onChange={(e) => handleLineChange(index, 'sku', e.target.value)}
-                        placeholder="SKU"
+                        placeholder={t('dispatch.placeholder_sku', 'SKU')}
                         className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 font-mono text-[11px]"
                       />
                     </div>
 
-                    <div className="col-span-5">
+                    <div className="col-span-8 sm:col-span-5">
                       <input
                         type="text"
                         required
                         value={item.itemName}
                         onChange={(e) => handleLineChange(index, 'itemName', e.target.value)}
-                        placeholder="Item name / description"
+                        placeholder={t('dispatch.placeholder_item_name', 'Item name / description')}
                         className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200"
                       />
                     </div>
 
-                    <div className="col-span-2">
+                    <div className="col-span-5 sm:col-span-2">
                       <select
                         value={item.unit}
                         onChange={(e) => handleLineChange(index, 'unit', e.target.value)}
                         className="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-slate-200"
                       >
-                        <option value="cases">cases</option>
-                        <option value="boxes">boxes</option>
-                        <option value="cartons">cartons</option>
-                        <option value="bags">bags</option>
-                        <option value="units">units</option>
-                        <option value="kg">kg</option>
-                        <option value="pallets">pallets</option>
-                        <option value="sacks">sacks</option>
+                        <option value="cases">{t('unit.cases')}</option>
+                        <option value="boxes">{t('unit.boxes')}</option>
+                        <option value="cartons">{t('unit.cartons')}</option>
+                        <option value="bags">{t('unit.bags')}</option>
+                        <option value="units">{t('unit.units')}</option>
+                        <option value="kg">{t('unit.kg')}</option>
+                        <option value="pallets">{t('unit.pallets')}</option>
+                        <option value="sacks">{t('unit.sacks')}</option>
                       </select>
                     </div>
 
-                    <div className="col-span-2">
+                    <div className="col-span-5 sm:col-span-2">
                       <input
                         type="number"
                         required
@@ -399,42 +499,44 @@ export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
                         step="any"
                         value={item.quantitySent}
                         onChange={(e) => handleLineChange(index, 'quantitySent', parseFloat(e.target.value) || 0)}
-                        placeholder="Qty"
+                        placeholder={t('dispatch.placeholder_qty', 'Qty')}
                         className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white font-mono text-right"
                       />
                     </div>
 
-                    <div className="col-span-1 text-right">
+                    <div className="col-span-2 sm:col-span-1 text-right flex justify-end">
                       <button
                         type="button"
                         disabled={lines.length <= 1}
                         onClick={() => handleRemoveLine(index)}
-                        className="text-slate-500 hover:text-rose-400 disabled:opacity-30 p-1 rounded"
+                        aria-label={`Remove line ${index + 1}`}
+                        className="text-slate-400 hover:text-rose-400 disabled:opacity-30 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
-                ))}
+                );
+                })}
               </div>
 
               <button
                 type="button"
                 onClick={handleAddLine}
-                className="text-xs text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1.5 mt-2 cursor-pointer"
+                className="text-xs text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1.5 px-2 py-1.5 rounded-lg min-h-[44px] cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>{t('create_dispatch.add_line', 'Add Line Item')}</span>
+                <span>{t('dispatch.add_line_item')}</span>
               </button>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">{t('create_dispatch.notes', 'Delivery Notes')}</label>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">{t('dispatch.delivery_notes')}</label>
               <textarea
                 rows={2}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Handling notes, temperature limits, delivery dock instructions..."
+                placeholder={t('dispatch.placeholder_dispatch_instructions', 'Handling notes, temperature limits, delivery dock instructions...')}
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white"
               />
             </div>
@@ -452,7 +554,7 @@ export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
                 type="submit"
                 className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-2 cursor-pointer min-h-[40px]"
               >
-                <span>{t('create_dispatch.review_submit', 'Continue to Review')}</span>
+                <span>{t('dispatch.continue_review')}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -466,28 +568,28 @@ export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
               <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-800 space-y-3 text-xs">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
                   <FileCheck className="w-4 h-4 text-emerald-400" />
-                  {t('create_dispatch.step2', 'Review Dispatch Summary')}
+                  {t('dispatch.review_summary')}
                 </h3>
 
                 <div className="grid grid-cols-2 gap-3 text-slate-300">
                   <div>
-                    <span className="text-slate-500 font-semibold block">{t('create_dispatch.origin_dock', 'Origin Terminal')}:</span>
-                    <div className="font-semibold text-white">{selectedLocation?.label || 'Main Dock'}</div>
+                    <span className="text-slate-500 font-semibold block">{t('dispatch.origin_terminal', 'Origin Terminal')}:</span>
+                    <div className="font-semibold text-white">{t(selectedLocation?.label || 'Main Dock')}</div>
                   </div>
                   <div>
-                    <span className="text-slate-500 font-semibold block">{t('create_dispatch.destination_partner', 'Destination Partner')}:</span>
-                    <div className="font-semibold text-white">{selectedPartner?.name}</div>
+                    <span className="text-slate-500 font-semibold block">{t('table.destination_partner', 'Destination Partner')}:</span>
+                    <div className="font-semibold text-white">{t(selectedPartner?.name || '')}</div>
                     <div className="text-[11px] text-slate-400">{destinationAddress}</div>
                   </div>
                   <div>
-                    <span className="text-slate-500 font-semibold block">{t('table.carrier', 'Carrier / Driver')}:</span>
-                    <div>{driverName || 'Unassigned'} ({vehicleReg || 'TRK'})</div>
+                    <span className="text-slate-500 font-semibold block">{t('dispatch.carrier_driver', 'Carrier / Driver')}:</span>
+                    <div>{driverName || t('dispatch.carrier_unassigned', 'Unassigned')} ({vehicleReg || 'TRK'})</div>
                     {driverPhone && <div className="text-[11px] text-slate-400">{driverPhone}</div>}
                   </div>
                   <div>
-                    <span className="text-slate-500 font-semibold block">{t('table.qty_sent', 'Total Manifest Quantity')}:</span>
+                    <span className="text-slate-500 font-semibold block">{t('dispatch.total_manifest_qty')}</span>
                     <div className="font-mono font-bold text-indigo-300 text-sm">
-                      {totalUnits} units across {lines.length} lines
+                      {t('dispatch.units_across_lines', { units: totalUnits, lines: lines.length })}
                     </div>
                   </div>
                 </div>
@@ -495,7 +597,7 @@ export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
 
               {/* Line items preview table */}
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-3">
-                <div className="text-xs font-bold text-white mb-2">{t('table.items', 'Item Breakdown')}</div>
+                <div className="text-xs font-bold text-white mb-2">{t('dispatch.item_breakdown')}</div>
                 <div className="divide-y divide-slate-800 text-xs">
                   {lines.map((l, i) => (
                     <div key={i} className="py-2 flex items-center justify-between">
@@ -504,7 +606,7 @@ export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
                         <span className="text-slate-200">{l.itemName}</span>
                       </div>
                       <div className="font-mono font-bold text-slate-200">
-                        {l.quantitySent} {l.unit}
+                        {l.quantitySent} {t(`unit.${l.unit}`, l.unit)}
                       </div>
                     </div>
                   ))}
@@ -513,7 +615,7 @@ export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
 
               {notes && (
                 <div className="bg-slate-800/30 p-2.5 rounded-lg border border-slate-800 text-xs text-slate-300">
-                  <span className="text-slate-500 font-semibold block">{t('create_dispatch.notes', 'Notes')}:</span>
+                  <span className="text-slate-500 font-semibold block">{t('dispatch.delivery_notes')}:</span>
                   {notes}
                 </div>
               )}
@@ -527,7 +629,7 @@ export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
                 className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-400 hover:text-white cursor-pointer min-h-[40px]"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span>{t('create_dispatch.back_btn', 'Back to Edit')}</span>
+                <span>{t('dispatch.back_to_edit')}</span>
               </button>
 
               <button
@@ -537,11 +639,11 @@ export const CreateDispatchModal: React.FC<CreateDispatchModalProps> = ({
                 className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white text-xs font-semibold rounded-xl shadow-lg shadow-emerald-600/30 flex items-center gap-2 cursor-pointer min-h-[40px]"
               >
                 {isLoading ? (
-                  <span>{t('create_dispatch.saving', 'Generating Manifest...')}</span>
+                  <span>{t('dispatch.generating_manifest')}</span>
                 ) : (
                   <>
                     <Truck className="w-4 h-4" />
-                    <span>{t('create_dispatch.confirm_btn', 'Confirm & Transmit Dispatch')}</span>
+                    <span>{t('dispatch.confirm_transmit')}</span>
                   </>
                 )}
               </button>

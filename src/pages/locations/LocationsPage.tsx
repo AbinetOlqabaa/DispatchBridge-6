@@ -95,7 +95,7 @@ export const LocationsPage: React.FC = () => {
     }
   };
 
-  if (loading) return <LoadingSpinner label="Loading dispatch origins & active delivery points..." />;
+  if (loading) return <LoadingSpinner label={t('msg.loading')} />;
 
   const canAdd = user && ['BUSINESS_OWNER', 'SENDER', 'SUPER_ADMIN'].includes(user.role);
 
@@ -106,18 +106,18 @@ export const LocationsPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-sky-400 bg-sky-950 px-2.5 py-0.5 rounded-full border border-sky-800">
-              {t('location.title', 'Dispatch Origins & Logistics Network')}
+              {t('nav.locations', 'Origins & Docks')}
             </span>
-            <span className="text-xs text-slate-400">{locations.length} {t('nav.locations', 'terminal docks')}</span>
+            <span className="text-xs text-slate-400">{locations.length} {t('locations.terminal_docks', 'terminal docks')}</span>
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">{t('location.title', 'Origin Location Directory')}</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">{t('nav.locations', 'Origin Location Directory')}</h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            {t('location.subtitle', 'Manage fulfillment centers, dispatch warehouses, and freight loading docks with geospatial coordinate tracking.')}
+            {t('locations.subtitle', 'Manage fulfillment centers, dispatch warehouses, and freight loading docks with geospatial coordinate tracking.')}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* View Mode Toggle */}
+          {/* View Mode Toggle (Requirement 7) */}
           <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700">
             <button
               onClick={() => setViewMode('map')}
@@ -128,7 +128,7 @@ export const LocationsPage: React.FC = () => {
               }`}
             >
               <MapIcon className="w-3.5 h-3.5" />
-              <span>{t('location.map_view', 'Map View')}</span>
+              <span>{t('locations.map_view', 'Map View')}</span>
             </button>
             <button
               onClick={() => setViewMode('grid')}
@@ -139,7 +139,7 @@ export const LocationsPage: React.FC = () => {
               }`}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
-              <span>{t('location.grid_view', 'Grid View')}</span>
+              <span>{t('locations.grid_view', 'Grid View')}</span>
             </button>
           </div>
 
@@ -149,7 +149,7 @@ export const LocationsPage: React.FC = () => {
               className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>{t('location.add_btn', 'Add Origin Dock')}</span>
+              <span>{t('action.add_location', 'Add Origin Dock')}</span>
             </button>
           )}
         </div>
@@ -169,7 +169,7 @@ export const LocationsPage: React.FC = () => {
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-bold text-white flex items-center gap-2">
             <Warehouse className="w-4 h-4 text-sky-400" />
-            <span>Registered Dispatch Origins ({locations.length})</span>
+            <span>{t('locations.registered_origins', { count: locations.length })}</span>
           </h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -181,11 +181,11 @@ export const LocationsPage: React.FC = () => {
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Warehouse className="w-4 h-4 text-sky-400" />
-                <h3 className="font-bold text-white text-sm">{loc.label}</h3>
+                <h3 className="font-bold text-white text-sm">{t(loc.label)}</h3>
               </div>
               {loc.isDefault && (
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800">
-                  Default Origin
+                  {t('locations.default_origin', 'Default Origin')}
                 </span>
               )}
             </div>
@@ -194,9 +194,9 @@ export const LocationsPage: React.FC = () => {
               <div className="flex items-start gap-2 text-slate-400">
                 <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
                 <div>
-                  <div className="text-slate-200">{loc.addressLines}</div>
+                  <div className="text-slate-200">{t(loc.addressLines)}</div>
                   <div className="text-slate-400 text-[11px]">
-                    {loc.city}, {loc.region} {loc.countryCode}
+                    {t(loc.city)}, {loc.region} {loc.countryCode}
                   </div>
                 </div>
               </div>
@@ -208,9 +208,9 @@ export const LocationsPage: React.FC = () => {
 
       {/* Add Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 text-slate-100 shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-white">{t('location.add_btn', 'Add Dispatch Origin Terminal')}</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 text-slate-100 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto scrollbar-thin">
+            <h3 className="text-base font-bold text-white">{t('locations.add_modal_title', 'Add Dispatch Origin Terminal')}</h3>
 
             {errorMessage && (
               <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-800 text-rose-300 text-xs flex items-center gap-2">
@@ -221,43 +221,43 @@ export const LocationsPage: React.FC = () => {
 
             <form onSubmit={handleCreateLocation} className="space-y-3 text-xs">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">{t('location.label', 'Terminal / Dock Label')} *</label>
+                <label className="block text-slate-300 font-semibold mb-1">{t('locations.label_field', 'Terminal / Dock Label *')}</label>
                 <input
                   type="text"
                   required
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
-                  placeholder="e.g. West Coast Distribution Hub - Bay 3"
+                  placeholder={t('loc.placeholder_name', 'e.g. West Coast Distribution Hub - Bay 3')}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">{t('location.address', 'Street Address & Bay')} *</label>
+                <label className="block text-slate-300 font-semibold mb-1">{t('locations.address_field', 'Street Address & Bay *')}</label>
                 <input
                   type="text"
                   required
                   value={addressLines}
                   onChange={(e) => setAddressLines(e.target.value)}
-                  placeholder="e.g. 500 Industrial Parkway, Dock 14"
+                  placeholder={t('loc.placeholder_address', 'e.g. 500 Industrial Parkway, Dock 14')}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">{t('location.city', 'City')} *</label>
+                  <label className="block text-slate-300 font-semibold mb-1">{t('locations.city_field', 'City *')}</label>
                   <input
                     type="text"
                     required
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    placeholder="Seattle"
+                    placeholder={t('loc.placeholder_city', 'Seattle')}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">{t('location.region', 'State / Region')} *</label>
+                  <label className="block text-slate-300 font-semibold mb-1">{t('locations.region_field', 'State / Region *')}</label>
                   <input
                     type="text"
                     required
@@ -271,7 +271,7 @@ export const LocationsPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">{t('location.coords', 'Latitude')} (optional)</label>
+                  <label className="block text-slate-300 font-semibold mb-1">{t('locations.lat_field', 'Latitude (optional)')}</label>
                   <input
                     type="number"
                     step="any"
@@ -282,7 +282,7 @@ export const LocationsPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-300 font-semibold mb-1">{t('location.coords', 'Longitude')} (optional)</label>
+                  <label className="block text-slate-300 font-semibold mb-1">{t('locations.lng_field', 'Longitude (optional)')}</label>
                   <input
                     type="number"
                     step="any"
@@ -303,7 +303,7 @@ export const LocationsPage: React.FC = () => {
                   className="rounded bg-slate-800 border-slate-700 text-indigo-600 focus:ring-0"
                 />
                 <label htmlFor="isDefaultLoc" className="text-slate-300 text-xs cursor-pointer">
-                  {t('location.is_default', 'Set as default origin location for dispatches')}
+                  {t('locations.set_default', 'Set as default origin location for dispatches')}
                 </label>
               </div>
 
@@ -311,16 +311,16 @@ export const LocationsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-3 py-2 text-slate-400 hover:text-white cursor-pointer"
+                  className="px-3 py-2 text-slate-400 hover:text-white"
                 >
                   {t('action.cancel', 'Cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl cursor-pointer"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl"
                 >
-                  {isSubmitting ? t('common.loading', 'Saving...') : t('location.create_btn', 'Register Location')}
+                  {isSubmitting ? t('locations.saving', 'Saving...') : t('locations.register_btn', 'Register Location')}
                 </button>
               </div>
             </form>

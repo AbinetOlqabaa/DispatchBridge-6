@@ -185,7 +185,6 @@ export class FaydaSimulationAdapter implements FaydaVerificationProvider {
       return {
         ...res,
         verified: false,
-        error: 'Fayda record mismatch for provided phone and FIN credentials.',
         failureReason: 'Fayda record mismatch for provided phone and FIN credentials.',
       };
     }

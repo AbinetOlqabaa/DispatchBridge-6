@@ -190,7 +190,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
     if (!selected) return;
 
     if (!selected.name.endsWith('.csv')) {
-      setUploadError('Please select a valid .csv file format.');
+      setUploadError(t('bulk.err_format', 'Please select a valid .csv file format.'));
       return;
     }
 
@@ -201,7 +201,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
         const text = event.target?.result as string;
         const parsed = parseCsvText(text);
         if (parsed.length === 0) {
-          setUploadError('The selected CSV file contains no valid dispatch data rows.');
+          setUploadError(t('bulk.err_empty', 'The selected CSV file contains no valid dispatch data rows.'));
           setParsedDispatches([]);
         } else {
           setParsedDispatches(parsed);
@@ -232,13 +232,17 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
 
       const response = await api.bulkCreateDispatches(payloads);
 
-      setUploadSuccess(`Successfully imported ${response.createdCount} dispatches into active logistics registry.`);
+      setUploadSuccess(
+        t('bulk.success_imported', 'Successfully imported {count} dispatches into active logistics registry.', {
+          count: response.createdCount,
+        })
+      );
       setTimeout(() => {
         onSuccess(response.createdCount);
         onClose();
       }, 1200);
     } catch (err: any) {
-      setUploadError(err.message || 'Failed to process bulk dispatch creation.');
+      setUploadError(err.message || t('msg.error'));
     } finally {
       setIsProcessing(false);
     }
@@ -261,9 +265,9 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
               <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">Bulk Import Dispatches via CSV</h2>
+              <h2 className="text-lg font-bold text-white">{t('bulk.title')}</h2>
               <p className="text-xs text-slate-400">
-                Upload manifests in bulk to create multiple delivery records at once with item-level validation.
+                {t('bulk.subtitle')}
               </p>
             </div>
           </div>
@@ -278,7 +282,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
         {/* Action / Helper Bar */}
         <div className="mt-4 p-4 bg-slate-950/60 border border-slate-800/80 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
           <div>
-            <span className="font-semibold text-slate-200">Standard CSV Column Schema:</span>
+            <span className="font-semibold text-slate-200">{t('bulk.schema_label', 'Standard CSV Column Schema:')}</span>
             <p className="text-slate-400 text-[11px] mt-0.5 font-mono">
               dispatch_reference, partner_name, destination_address, driver_name, sku, item_name, unit, quantity
             </p>
@@ -289,7 +293,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
             className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 rounded-lg text-xs font-semibold cursor-pointer shrink-0 transition-colors"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Download Template CSV</span>
+            <span>{t('bulk.download_template')}</span>
           </button>
         </div>
 
@@ -298,10 +302,10 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
           <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-700 hover:border-indigo-500 bg-slate-950/40 hover:bg-indigo-950/10 rounded-xl p-6 cursor-pointer transition-colors text-center">
             <Upload className="w-8 h-8 text-indigo-400 mb-2" />
             <span className="text-sm font-semibold text-white">
-              {file ? file.name : 'Choose or drop CSV file here'}
+              {file ? file.name : t('bulk.choose_file')}
             </span>
             <span className="text-xs text-slate-500 mt-1">
-              Supports .csv files with multiple lines and grouped manifest references
+              {t('bulk.drop_note')}
             </span>
             <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" />
           </label>
@@ -327,28 +331,28 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-slate-300 flex items-center gap-2">
                 <Layers className="w-4 h-4 text-sky-400" />
-                Parsed Manifests ({parsedDispatches.length}) • {totalLinesCount} Total Lines • {totalQuantitySum} Units
+                {t('bulk.parsed_summary', { dispatches: parsedDispatches.length, lines: totalLinesCount, units: totalQuantitySum })}
               </span>
               {totalErrorsCount > 0 ? (
                 <span className="text-rose-400 font-semibold bg-rose-950 px-2 py-0.5 rounded border border-rose-800">
-                  {totalErrorsCount} validation errors
+                  {t('bulk.validation_errors', { count: totalErrorsCount })}
                 </span>
               ) : (
                 <span className="text-emerald-400 font-semibold bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
-                  100% Validated Ready
+                  {t('bulk.validated_ready')}
                 </span>
               )}
             </div>
 
-            <div className="border border-slate-800 rounded-xl overflow-hidden max-h-56 overflow-y-auto">
-              <table className="w-full text-left text-xs">
+            <div className="border border-slate-800 rounded-xl overflow-x-auto max-h-56 overflow-y-auto scrollbar-thin">
+              <table className="w-full text-left text-xs min-w-[550px] sm:min-w-full">
                 <thead className="bg-slate-950 text-slate-400 border-b border-slate-800">
                   <tr>
-                    <th className="py-2 px-3">Reference</th>
-                    <th className="py-2 px-3">Receiving Partner</th>
-                    <th className="py-2 px-3">Driver / Truck</th>
-                    <th className="py-2 px-3">Items / Lines</th>
-                    <th className="py-2 px-3 text-right">Total Units</th>
+                    <th className="py-2 px-3">{t('table.dispatch_number', 'Reference')}</th>
+                    <th className="py-2 px-3">{t('table.destination_partner', 'Receiving Partner')}</th>
+                    <th className="py-2 px-3">{t('dispatch.carrier_driver', 'Driver / Truck')}</th>
+                    <th className="py-2 px-3">{t('table.items', 'Items / Lines')}</th>
+                    <th className="py-2 px-3 text-right">{t('table.quantity_loss', 'Total Units')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/80 bg-slate-900/60">
@@ -356,7 +360,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                     <tr key={idx} className="hover:bg-slate-800/40">
                       <td className="py-2 px-3 font-mono font-bold text-sky-400">{d.reference}</td>
                       <td className="py-2 px-3">
-                        <div className="font-semibold text-white">{d.partnerName || 'Unknown Partner'}</div>
+                        <div className="font-semibold text-white">{d.partnerName || t('dispatch.unknown_partner', 'Unknown Partner')}</div>
                         {d.destinationAddress && (
                           <div className="text-[10px] text-slate-500 truncate max-w-[180px]">
                             {d.destinationAddress}
@@ -364,10 +368,10 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                         )}
                       </td>
                       <td className="py-2 px-3 text-slate-300 text-[11px]">
-                        {d.driverName || 'Standard Freight'} {d.vehicleReg ? `(${d.vehicleReg})` : ''}
+                        {d.driverName || t('dispatch.standard_freight', 'Standard Freight')} {d.vehicleReg ? `(${d.vehicleReg})` : ''}
                       </td>
                       <td className="py-2 px-3">
-                        <span className="text-slate-300 font-mono">{d.lines.length} items</span>
+                        <span className="text-slate-300 font-mono">{d.lines.length} {t('table.items', 'items')}</span>
                         <div className="text-[10px] text-slate-500 truncate max-w-[150px]">
                           {d.lines.map((l) => `${l.quantitySent}x ${l.sku}`).join(', ')}
                         </div>
@@ -390,7 +394,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
             onClick={onClose}
             className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white bg-slate-800/60 hover:bg-slate-800 rounded-xl cursor-pointer"
           >
-            Cancel
+            {t('action.cancel', 'Cancel')}
           </button>
 
           <button
@@ -404,7 +408,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
             ) : (
               <Upload className="w-4 h-4" />
             )}
-            <span>Process & Create {parsedDispatches.length} Dispatches</span>
+            <span>{t('bulk.process_btn', { count: parsedDispatches.length })}</span>
           </button>
         </div>
       </div>

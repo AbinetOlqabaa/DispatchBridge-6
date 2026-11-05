@@ -14,6 +14,7 @@ import {
   Package,
   Camera,
   PenTool,
+  Globe,
 } from 'lucide-react';
 import { CargoEvidence, DiscrepancyType, Dispatch, ItemCondition } from '../../types/dispatch.js';
 import { api } from '../../services/api.js';
@@ -22,6 +23,7 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner.js';
 import { SignaturePad } from '../../components/dispatches/SignaturePad.js';
 import { DamagePhotoUpload } from '../../components/dispatches/DamagePhotoUpload.js';
 import { useTranslation } from '../../context/LanguageContext.js';
+import { useOfflineSync } from '../../utils/offlineSync.js';
 
 interface PublicPartnerViewProps {
   shareToken: string;
@@ -29,7 +31,8 @@ interface PublicPartnerViewProps {
 }
 
 export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken, onExit }) => {
-  const { t } = useTranslation();
+  const { t, language, setLanguage, languages } = useTranslation();
+  const { isOnline } = useOfflineSync();
   const [dispatch, setDispatch] = useState<Dispatch | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +79,7 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
         }))
       );
     } catch (err: any) {
-      setError(err.message || 'Delivery manifest not found or link has expired.');
+      setError(err.message || t('manifest.load_error_msg', 'Delivery manifest not found or link has expired.'));
     } finally {
       setLoading(false);
     }
@@ -141,28 +144,35 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
 
       setDispatch(updated);
       setIsVerifying(false);
-      setSubmitSuccess('Official delivery receipt verified! Shipper has been notified, signature locked, and audit entry recorded.');
+      setSubmitSuccess(
+        !isOnline
+          ? t(
+              'offline_sync.saved_offline_msg',
+              'Delivery update saved locally in IndexedDB and will sync automatically when connectivity returns.'
+            )
+          : t('manifest.submit_success_msg', 'Official delivery receipt verified! Shipper has been notified, signature locked, and audit entry recorded.')
+      );
     } catch (err: any) {
-      setSubmitError(err.message || 'Failed to submit receipt confirmation.');
+      setSubmitError(err.message || t('manifest.submit_error_msg', 'Failed to submit receipt confirmation.'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (loading) return <LoadingSpinner label="Retrieving secure delivery manifest..." />;
+  if (loading) return <LoadingSpinner label={t('dispatch.loading_manifest')} />;
 
   if (error || !dispatch) {
     return (
       <div className="max-w-xl mx-auto my-12 p-8 bg-slate-900 border border-slate-800 rounded-2xl text-center space-y-4">
         <AlertTriangle className="w-12 h-12 text-rose-400 mx-auto" />
-        <h2 className="text-lg font-bold text-white">Invalid or Expired Link</h2>
-        <p className="text-xs text-slate-400">{error || 'This delivery link could not be verified.'}</p>
+        <h2 className="text-lg font-bold text-white">{t('public.invalid_link_title')}</h2>
+        <p className="text-xs text-slate-400">{error || t('msg.error')}</p>
         {onExit && (
           <button
             onClick={onExit}
             className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold cursor-pointer"
           >
-            Return to App
+            {t('public.return_to_app')}
           </button>
         )}
       </div>
@@ -173,32 +183,48 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 px-4 py-6">
-      {/* Top Banner */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      {/* Top Banner with Language Selector */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+        <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold">
             <Boxes className="w-4 h-4" />
           </div>
           <div>
-            <div className="text-xs font-bold text-white">{t('app.name', 'DispatchBridge')} {t('nav.partners', 'Partner Portal')}</div>
-            <div className="text-[10px] text-slate-400">Authenticated Delivery Slip</div>
+            <div className="text-xs font-bold text-white">{t('app.name')} • {t('app.subtitle')}</div>
+            <div className="text-[10px] text-slate-400">{t('auth.signin_subtitle')}</div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Quick Language Switcher for external partners */}
+          <div className="flex items-center bg-slate-800 border border-slate-700/80 rounded-lg p-0.5">
+            <Globe className="w-3 h-3 text-sky-400 ml-1.5 mr-1" />
+            {languages.map((l) => (
+              <button
+                key={l.code}
+                onClick={() => setLanguage(l.code)}
+                className={`px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-colors ${
+                  language === l.code ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {l.shortLabel}
+              </button>
+            ))}
+          </div>
+
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium cursor-pointer min-h-[44px]"
           >
-            <Printer className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{t('dispatch.print_manifest', 'Print Slip')}</span>
+            <Printer className="w-4 h-4" />
+            <span className="hidden sm:inline">{t('manifest.print', 'Print')}</span>
           </button>
           {onExit && (
             <button
               onClick={onExit}
-              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs cursor-pointer"
+              className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs cursor-pointer"
             >
-              {t('common.close', 'Close')}
+              {t('action.close')}
             </button>
           )}
         </div>
@@ -209,15 +235,15 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
           <div>
             <div className="text-xs text-indigo-400 font-semibold uppercase tracking-wider">
-              Supplier Delivery Manifest
+              {t('manifest.supplier_title', 'Supplier Delivery Manifest')}
             </div>
             <h1 className="text-2xl font-bold font-mono text-white mt-0.5">{dispatch.dispatchNumber}</h1>
-            <p className="text-xs text-slate-400">Issued by {dispatch.senderBusinessName}</p>
+            <p className="text-xs text-slate-400">{t('manifest.issued_by', 'Issued by {name}', { name: t(dispatch.senderBusinessName) })}</p>
           </div>
           <div className="flex sm:flex-col items-center sm:items-end justify-between gap-1">
             <StatusBadge status={dispatch.status} />
             <span className="text-[11px] text-slate-400 font-mono">
-              Dispatched: {new Date(dispatch.dispatchedAt).toLocaleDateString()}
+              {t('table.dispatched', 'Dispatched')}: {new Date(dispatch.dispatchedAt).toLocaleDateString()}
             </span>
           </div>
         </div>
@@ -225,20 +251,20 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
         {/* Shipper & Receiver details */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
           <div className="bg-slate-800/40 p-3.5 rounded-xl border border-slate-800">
-            <span className="text-slate-500 font-semibold block mb-1">Delivering Shipper:</span>
-            <div className="font-bold text-white text-sm">{dispatch.senderBusinessName}</div>
-            <div className="text-slate-400 text-[11px] mt-0.5">Origin: {dispatch.originLocationSnapshot.label}</div>
+            <span className="text-slate-500 font-semibold block mb-1">{t('manifest.delivering_shipper', 'Delivering Shipper')}:</span>
+            <div className="font-bold text-white text-sm">{t(dispatch.senderBusinessName)}</div>
+            <div className="text-slate-400 text-[11px] mt-0.5">{t('table.origin_label', 'Origin')}: {t(dispatch.originLocationSnapshot.label)}</div>
             <div className="text-slate-400 text-[11px]">
-              Driver: {dispatch.driverName || 'Standard Freight'} ({dispatch.vehicleReg || 'TRK'})
+              {t('dispatch.carrier_driver', 'Driver')}: {dispatch.driverName ? t(dispatch.driverName) : t('dispatch.standard_freight', 'Standard Freight')} ({dispatch.vehicleReg || 'TRK'})
             </div>
           </div>
 
           <div className="bg-slate-800/40 p-3.5 rounded-xl border border-slate-800">
-            <span className="text-slate-500 font-semibold block mb-1">Receiving Destination:</span>
-            <div className="font-bold text-white text-sm">{dispatch.destinationSnapshot.partnerName}</div>
+            <span className="text-slate-500 font-semibold block mb-1">{t('manifest.receiving_destination', 'Receiving Destination')}:</span>
+            <div className="font-bold text-white text-sm">{t(dispatch.destinationSnapshot.partnerName)}</div>
             <div className="text-slate-400 text-[11px] mt-0.5 flex items-start gap-1">
               <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
-              <span>{dispatch.destinationSnapshot.address}</span>
+              <span>{t(dispatch.destinationSnapshot.address)}</span>
             </div>
           </div>
         </div>
@@ -247,7 +273,7 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
         <div className="bg-indigo-950/40 border border-indigo-900/60 p-3 rounded-xl flex items-center gap-2.5 text-xs text-indigo-200">
           <ShieldCheck className="w-4 h-4 text-indigo-400 shrink-0" />
           <div>
-            <span className="font-semibold text-white">Receipt Acknowledged:</span> Opening this delivery manifest confirmed receipt viewing on the shipper's dispatch audit board.
+            <span className="font-semibold text-white">{t('manifest.delivery_acknowledged_title', 'Receipt Acknowledged')}:</span> {t('manifest.receipt_view_notice', 'Opening this delivery manifest confirmed receipt viewing on the shipper\'s dispatch audit board.')}
           </div>
         </div>
       </div>
@@ -264,10 +290,10 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-white flex items-center gap-2">
             <Package className="w-4 h-4 text-sky-400" />
-            Cargo Checklist ({dispatch.lines.length} items)
+            {t('manifest.cargo_checklist', 'Cargo Checklist ({count} items)', { count: dispatch.lines.length })}
           </h2>
           <span className="text-xs font-mono font-semibold text-slate-300">
-            Total Dispatched: {dispatch.totalQuantityDispatched} units
+            {t('manifest.total_dispatched_units', 'Total Dispatched: {units} units', { units: dispatch.totalQuantityDispatched })}
           </span>
         </div>
 
@@ -276,32 +302,32 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
             <div key={line.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
               <div>
                 <span className="font-mono text-[11px] text-indigo-300 font-semibold mr-2">{line.sku}</span>
-                <span className="font-semibold text-slate-200">{line.itemName}</span>
-                {line.notes && <p className="text-[11px] text-rose-300 mt-0.5">Note: {line.notes}</p>}
+                <span className="font-semibold text-slate-200">{t(line.itemName)}</span>
+                {line.notes && <p className="text-[11px] text-rose-300 mt-0.5">{t('table.notes', 'Note')}: {t(line.notes)}</p>}
               </div>
 
               <div className="flex items-center gap-4 text-right shrink-0">
                 <div>
-                  <span className="text-[11px] text-slate-500 block">Sent</span>
+                  <span className="text-[11px] text-slate-500 block">{t('table.sent_col', 'Sent')}</span>
                   <span className="font-mono font-bold text-slate-200">
-                    {line.quantitySent} {line.unit}
+                    {line.quantitySent} {t('unit.' + line.unit.toLowerCase(), line.unit)}
                   </span>
                 </div>
 
                 {line.quantityReceived !== undefined && (
                   <div>
-                    <span className="text-[11px] text-slate-500 block">Received</span>
+                    <span className="text-[11px] text-slate-500 block">{t('table.received_col', 'Received')}</span>
                     <span className="font-mono font-bold text-emerald-400">
-                      {line.quantityReceived} {line.unit}
+                      {line.quantityReceived} {t('unit.' + line.unit.toLowerCase(), line.unit)}
                     </span>
                   </div>
                 )}
 
                 {line.lossQty && line.lossQty > 0 ? (
                   <div>
-                    <span className="text-[11px] text-rose-400 block font-semibold">Short</span>
+                    <span className="text-[11px] text-rose-400 block font-semibold">{t('table.short_col', 'Short')}</span>
                     <span className="font-mono font-bold text-rose-400">
-                      -{line.lossQty} {line.unit}
+                      -{line.lossQty} {t('unit.' + line.unit.toLowerCase(), line.unit)}
                     </span>
                   </div>
                 ) : null}
@@ -317,26 +343,26 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-emerald-400 font-bold">
               <CheckCircle2 className="w-4 h-4" />
-              <span>Delivery Acknowledged & Signed</span>
+              <span>{t('manifest.delivery_acknowledged_title', 'Delivery Acknowledged & Signed')}</span>
             </div>
             <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2.5 py-1 rounded-lg">
               <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
-              <span>Dock Record Locked</span>
+              <span>{t('manifest.dock_record_locked', 'Dock Record Locked')}</span>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-slate-300">
             <div>
-              <span className="text-slate-500 block text-[11px]">Signer Name & Role:</span>
-              <strong className="text-white">{dispatch.receiverSignoff.signerName}</strong>
-              <div className="text-[11px] text-slate-400">{dispatch.receiverSignoff.signerRole}</div>
+              <span className="text-slate-500 block text-[11px]">{t('manifest.signer_info', 'Signer Name & Role:')}</span>
+              <strong className="text-white">{t(dispatch.receiverSignoff.signerName)}</strong>
+              <div className="text-[11px] text-slate-400">{t(dispatch.receiverSignoff.signerRole)}</div>
             </div>
             <div>
-              <span className="text-slate-500 block text-[11px]">Signed At:</span>
+              <span className="text-slate-500 block text-[11px]">{t('manifest.signed_at', 'Signed At:')}</span>
               <span className="text-slate-200">{new Date(dispatch.receiverSignoff.signedAt).toLocaleString()}</span>
             </div>
             <div>
-              <span className="text-slate-500 block text-[11px]">Comments:</span>
-              <span className="text-slate-300 italic">{dispatch.receiverSignoff.comments || 'No remarks recorded.'}</span>
+              <span className="text-slate-500 block text-[11px]">{t('manifest.remarks', 'Remarks:')}</span>
+              <span className="text-slate-300 italic">{dispatch.receiverSignoff.comments ? t(dispatch.receiverSignoff.comments) : t('manifest.no_remarks', 'No remarks recorded.')}</span>
             </div>
           </div>
 
@@ -344,18 +370,18 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
             <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
                 <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">
-                  Verified Digital Glass Signature
+                  {t('recon.verified_glass_sig', 'Verified Digital Glass Signature')}
                 </span>
                 <div className="mt-1 bg-slate-950 p-2 rounded-xl border border-slate-800 inline-block">
                   <img
                     src={dispatch.receiverSignoff.signatureSvgOrBase64}
-                    alt="Receiver Signature"
+                    alt={t('dispatch.receiver_signature_alt', 'Receiver Signature')}
                     className="h-14 w-auto max-w-xs object-contain"
                   />
                 </div>
               </div>
               <div className="text-[11px] text-slate-400">
-                Enforceable cryptographic proof-of-delivery captured on receiving glass terminal.
+                {t('recon.enforceable_proof_note', 'Enforceable cryptographic proof-of-delivery captured on receiving glass terminal.')}
               </div>
             </div>
           )}
@@ -367,18 +393,18 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
         <div className="bg-slate-900 border border-rose-900/60 rounded-2xl p-5 text-xs space-y-3">
           <div className="flex items-center gap-2 text-rose-400 font-bold">
             <AlertTriangle className="w-4 h-4" />
-            <span>Recorded Discrepancy & Claims ({dispatch.discrepancyCases.length})</span>
+            <span>{t('recon.recorded_claims_title', 'Recorded Discrepancy & Claims ({count})', { count: dispatch.discrepancyCases.length })}</span>
           </div>
           <div className="space-y-2">
             {dispatch.discrepancyCases.map((c) => (
               <div key={c.id} className="bg-slate-800/50 p-3 rounded-xl border border-slate-700 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-white">{c.itemName}</span>
+                  <span className="font-semibold text-white">{t(c.itemName || '')}</span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-800">
-                    {c.type} (-{c.shortfallQuantity})
+                    {t('discrepancy.' + c.type.toLowerCase(), c.type)} (-{c.shortfallQuantity})
                   </span>
                 </div>
-                {c.notes && <p className="text-[11px] text-slate-400">Note: {c.notes}</p>}
+                {c.notes && <p className="text-[11px] text-slate-400">{t('table.notes', 'Note')}: {t(c.notes)}</p>}
                 {c.evidence && c.evidence.length > 0 && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
                     {c.evidence.map((ev) => (
@@ -401,15 +427,15 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
       {/* Interactive Verification Form on Dock */}
       {!isAlreadyReceived && !isVerifying && (
         <div className="bg-slate-900 border border-amber-900/60 rounded-2xl p-6 text-center space-y-3">
-          <h3 className="text-sm font-bold text-white">{t('reconcile.title', 'Unload & Confirm Delivery on Dock')}</h3>
+          <h3 className="text-sm font-bold text-white">{t('recon.unload_dock_title', 'Unload & Confirm Delivery on Dock')}</h3>
           <p className="text-xs text-slate-400 max-w-md mx-auto">
-            {t('reconcile.subtitle', 'Receiving supervisor: Count items offloaded from the carrier truck. Verify physical items match this manifest.')}
+            {t('recon.unload_dock_desc', 'Receiving supervisor: Count items offloaded from the carrier truck. Verify physical items match this manifest.')}
           </p>
           <button
             onClick={() => setIsVerifying(true)}
             className="px-6 py-3 min-h-[44px] bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-amber-600/30 cursor-pointer"
           >
-            {t('action.reconcile', 'Start Dock Count & Sign Off')}
+            {t('recon.start_dock_count', 'Start Dock Count & Sign Off')}
           </button>
         </div>
       )}
@@ -417,7 +443,7 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
       {isVerifying && (
         <div className="bg-slate-900 border border-amber-700/80 rounded-2xl p-6 shadow-2xl space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <h3 className="text-sm font-bold text-white">{t('reconcile.dock_signature', 'Confirm Dock Count & Sign Off')}</h3>
+            <h3 className="text-sm font-bold text-white">{t('recon.confirm_dock_count', 'Confirm Dock Count & Sign Off')}</h3>
             <button onClick={() => setIsVerifying(false)} className="text-xs text-slate-400 hover:text-white cursor-pointer min-h-[44px] px-2 flex items-center">
               {t('action.cancel', 'Cancel')}
             </button>
@@ -435,13 +461,13 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
               {dispatch.lines.map((line, idx) => (
                 <div key={line.id} className="bg-slate-800/50 p-3 rounded-xl border border-slate-700 text-xs space-y-2">
                   <div className="flex justify-between font-semibold">
-                    <span className="text-white">{line.itemName}</span>
-                    <span className="text-slate-400 font-mono">Dispatched: {line.quantitySent} {line.unit}</span>
+                    <span className="text-white">{t(line.itemName)}</span>
+                    <span className="text-slate-400 font-mono">{t('table.dispatched')}: {line.quantitySent} {t('unit.' + line.unit.toLowerCase(), line.unit)}</span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                     <div>
-                      <label className="block text-[11px] text-slate-400 mb-1">Received ({line.unit})</label>
+                      <label className="block text-[11px] text-slate-400 mb-1">{t('table.received')} ({t('unit.' + line.unit.toLowerCase(), line.unit)})</label>
                       <input
                         type="number"
                         min={0}
@@ -453,7 +479,7 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
                     </div>
 
                     <div>
-                      <label className="block text-[11px] text-slate-400 mb-1">Condition</label>
+                      <label className="block text-[11px] text-slate-400 mb-1">{t('table.condition')}</label>
                       <select
                         value={lineReceipts[idx]?.condition || 'GOOD'}
                         onChange={(e) => {
@@ -463,15 +489,15 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
                         }}
                         className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white"
                       >
-                        <option value="GOOD">Good / Intact</option>
-                        <option value="DAMAGED">Damaged</option>
-                        <option value="LOST">Lost / Missing</option>
-                        <option value="OTHER">Other</option>
+                        <option value="GOOD">{t('condition.good_intact', 'Good / Intact')}</option>
+                        <option value="DAMAGED">{t('condition.damaged', 'Damaged')}</option>
+                        <option value="LOST">{t('condition.lost_missing', 'Lost / Missing')}</option>
+                        <option value="OTHER">{t('condition.other', 'Other')}</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-[11px] text-slate-400 mb-1">Discrepancy Category</label>
+                      <label className="block text-[11px] text-slate-400 mb-1">{t('table.discrepancy_category', 'Discrepancy Category')}</label>
                       <select
                         value={lineReceipts[idx]?.discrepancyType || 'NONE'}
                         onChange={(e) => {
@@ -481,17 +507,17 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
                         }}
                         className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white"
                       >
-                        <option value="NONE">None (Full Count)</option>
-                        <option value="SHORTAGE">Shortage</option>
-                        <option value="DAMAGED">Damaged in Transit</option>
-                        <option value="OVERAGE">Overage (Excess)</option>
-                        <option value="NOT_RECEIVED">Not Received</option>
-                        <option value="OTHER">Other</option>
+                        <option value="NONE">{t('discrepancy.none', 'None (Full Count)')}</option>
+                        <option value="SHORTAGE">{t('discrepancy.shortage', 'Shortage')}</option>
+                        <option value="DAMAGED">{t('discrepancy.damaged', 'Damaged in Transit')}</option>
+                        <option value="OVERAGE">{t('discrepancy.overage', 'Overage (Excess)')}</option>
+                        <option value="NOT_RECEIVED">{t('discrepancy.not_received', 'Not Received')}</option>
+                        <option value="OTHER">{t('condition.other', 'Other')}</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-[11px] text-slate-400 mb-1">Inspection Note</label>
+                      <label className="block text-[11px] text-slate-400 mb-1">{t('table.notes', 'Inspection Note')}</label>
                       <input
                         type="text"
                         value={lineReceipts[idx]?.notes || ''}
@@ -500,7 +526,7 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
                           updated[idx].notes = e.target.value;
                           setLineReceipts(updated);
                         }}
-                        placeholder="e.g. 2 boxes crushed"
+                        placeholder={t('dispatch.placeholder_discrepancy_reason', 'e.g. 2 boxes crushed')}
                         className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white"
                       />
                     </div>
@@ -522,36 +548,36 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Signer Full Name *</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">{t('recon.signer_name_field', 'Receiver Signer Name')} *</label>
                 <input
                   type="text"
                   required
                   value={signerName}
                   onChange={(e) => setSignerName(e.target.value)}
-                  placeholder="e.g. David Miller"
+                  placeholder={t('dispatch.placeholder_full_name', 'e.g. David Miller')}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Title / Role *</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">{t('recon.signer_role_field', 'Supervisor / Role Title')} *</label>
                 <input
                   type="text"
                   required
                   value={signerRole}
                   onChange={(e) => setSignerRole(e.target.value)}
-                  placeholder="e.g. Receiving Dock Lead"
+                  placeholder={t('dispatch.placeholder_role_title', 'e.g. Receiving Dock Lead')}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Dock Comments & Seal Inspection</label>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">{t('recon.dock_notes_field', 'Dock Notes & Cargo Comments')}</label>
               <textarea
                 rows={2}
                 value={comments}
                 onChange={(e) => setComments(e.target.value)}
-                placeholder="Optional comments regarding vehicle cleanliness, pallet condition..."
+                placeholder={t('dispatch.placeholder_signoff_remarks', 'Optional comments regarding vehicle cleanliness, pallet condition...')}
                 className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white"
               />
             </div>
@@ -577,7 +603,7 @@ export const PublicPartnerView: React.FC<PublicPartnerViewProps> = ({ shareToken
                 disabled={isSubmitting}
                 className="px-6 py-2.5 min-h-[44px] bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white text-xs font-semibold rounded-xl cursor-pointer shadow-lg shadow-emerald-600/30 flex items-center justify-center"
               >
-                {isSubmitting ? t('common.loading', 'Submitting receipt...') : t('reconcile.dock_signature', 'Submit Official Dock Sign-Off')}
+                {isSubmitting ? t('auth.submitting', 'Submitting receipt...') : t('recon.confirm_signoff_btn', 'Confirm Delivery & Submit Sign-Off')}
               </button>
             </div>
           </form>

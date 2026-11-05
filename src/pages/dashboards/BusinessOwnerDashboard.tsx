@@ -30,12 +30,14 @@ interface BusinessOwnerDashboardProps {
   onSelectDispatch: (id: string) => void;
   onNavigateTab: (tab: string) => void;
   onCreateDispatch: () => void;
+  onOpenProfile?: () => void;
 }
 
 export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
   onSelectDispatch,
   onNavigateTab,
   onCreateDispatch,
+  onOpenProfile,
 }) => {
   const { user, switchBusiness, createBusiness } = useAuth();
   const { t } = useTranslation();
@@ -71,7 +73,7 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
       setDispatches(dList);
       setPartners(pList);
     } catch (err: any) {
-      setError(err.message || 'Failed to load business overview.');
+      setError(err.message || t('msg.error'));
     } finally {
       setLoading(false);
     }
@@ -80,7 +82,7 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
   const handleCreateBusinessSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!bizForm.name.trim() || !bizForm.contactEmail.trim() || !bizForm.contactPhone.trim() || !bizForm.address.trim()) {
-      setBizModalError('Entity Name, Contact Email, Phone, and Address are required.');
+      setBizModalError(t('biz.err_required_fields', 'Entity Name, Contact Email, Phone, and Address are required.'));
       return;
     }
     setSubmittingBiz(true);
@@ -98,13 +100,13 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
       });
       await loadData();
     } catch (err: any) {
-      setBizModalError(err.message || 'Failed to register business entity.');
+      setBizModalError(err.message || t('biz.err_register_failed', 'Failed to register business entity.'));
     } finally {
       setSubmittingBiz(false);
     }
   };
 
-  if (loading) return <LoadingSpinner label="Compiling executive dispatch metrics..." />;
+  if (loading) return <LoadingSpinner label={t('dashboard.loading_exec_metrics')} />;
   if (error) {
     return (
       <div className="p-8 text-center">
@@ -138,7 +140,7 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
   return (
     <div className="space-y-6">
       {/* Profile Summary Card */}
-      <ProfileSummaryCard />
+      <ProfileSummaryCard onOpenProfile={onOpenProfile} />
 
       {/* Executive Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-sm">
@@ -147,26 +149,26 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
             <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400 bg-emerald-950 px-2.5 py-0.5 rounded-full border border-emerald-800">
               {t('role.business_owner')}
             </span>
-            <span className="text-xs text-slate-400">Company ID: {user?.businessId}</span>
+            <span className="text-xs text-slate-400">{t('biz.company_id', { id: user?.businessId || '' })}</span>
           </div>
 
           <div className="flex items-center gap-2.5 mt-1">
             <button
               onClick={() => setShowBusinessDropdown(!showBusinessDropdown)}
               className="flex items-center gap-2 text-left group cursor-pointer focus:outline-none"
-              title="Switch Business Entity"
-              aria-label="Switch Business Entity"
+              title={t('action.switch_entity')}
+              aria-label={t('action.switch_entity')}
             >
               <Building2 className="w-5 h-5 text-indigo-400 group-hover:text-indigo-300 transition-colors" />
               <h1 className="text-2xl font-bold text-white tracking-tight group-hover:text-indigo-200 transition-colors">
-                {user?.businessName}
+                {t(user?.businessName || '')}
               </h1>
               <ChevronDown className={`w-4 h-4 text-slate-400 group-hover:text-white transition-transform ${showBusinessDropdown ? 'rotate-180' : ''}`} />
             </button>
 
             {user?.memberships && user.memberships.length > 1 && (
               <span className="text-[11px] font-semibold text-indigo-300 bg-indigo-950/80 border border-indigo-800/60 px-2 py-0.5 rounded-full">
-                {user.memberships.length} Entities
+                {t('biz.entities_count', { count: user.memberships.length })}
               </span>
             )}
           </div>
@@ -180,7 +182,7 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
               <div className="fixed inset-0 z-20" onClick={() => setShowBusinessDropdown(false)} />
               <div className="absolute left-0 top-full mt-2 w-80 bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl p-2 z-30">
                 <div className="px-3 py-2 border-b border-slate-800 text-[11px] font-semibold uppercase tracking-wider text-slate-400 flex items-center justify-between">
-                  <span>Switch Business Entity</span>
+                  <span>{t('action.switch_entity', 'Switch Business Entity')}</span>
                   {isSwitching && <Loader2 className="w-3.5 h-3.5 text-indigo-400 animate-spin" />}
                 </div>
                 <div className="py-1 max-h-56 overflow-y-auto divide-y divide-slate-800/40 scrollbar-thin">
@@ -200,7 +202,7 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
                             await switchBusiness(m.businessId);
                             setShowBusinessDropdown(false);
                           } catch (e: any) {
-                            setError(e.message || 'Failed to switch entity.');
+                            setError(e.message || t('biz.err_switch_failed', 'Failed to switch entity.'));
                           } finally {
                             setIsSwitching(false);
                           }
@@ -212,8 +214,10 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
                         }`}
                       >
                         <div className="truncate mr-2">
-                          <div className="font-semibold truncate">{m.businessName}</div>
-                          <div className="text-[10px] text-slate-400">ID: {m.businessId} • {m.role}</div>
+                          <div className="font-semibold truncate">{t(m.businessName)}</div>
+                          <div className="text-[10px] text-slate-400">
+                            ID: {m.businessId} • {t('role.' + m.role.toLowerCase(), m.role)}
+                          </div>
                         </div>
                         {isActive ? (
                           <Check className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -231,7 +235,7 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
                     className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-indigo-300 hover:text-white hover:bg-indigo-900/40 border border-indigo-900/60 transition-colors cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Register New Business Entity</span>
+                    <span>{t('action.register_new_entity', 'Register New Business Entity')}</span>
                   </button>
                 </div>
               </div>
@@ -258,7 +262,7 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
             <Truck className="w-4 h-4 text-sky-400" />
           </div>
           <div className="text-2xl font-bold text-white">{activeDispatches}</div>
-          <div className="text-[11px] text-slate-500 mt-1">Out of {totalDispatches} {t('metric.total_dispatches')}</div>
+          <div className="text-[11px] text-slate-500 mt-1">{t('metric.out_of_total', 'Out of {total} dispatches', { total: totalDispatches })}</div>
         </div>
 
         <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
@@ -267,7 +271,7 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
             <Package className="w-4 h-4 text-indigo-400" />
           </div>
           <div className="text-2xl font-bold text-white">{totalItemsSent.toLocaleString()}</div>
-          <div className="text-[11px] text-slate-500 mt-1">Across all manifests</div>
+          <div className="text-[11px] text-slate-500 mt-1">{t('metric.across_all_manifests', 'Across all manifests')}</div>
         </div>
 
         <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
@@ -276,7 +280,7 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
             <AlertTriangle className="w-4 h-4 text-rose-400" />
           </div>
           <div className="text-2xl font-bold text-rose-400">{totalItemsLost.toLocaleString()}</div>
-          <div className="text-[11px] text-rose-400/80 mt-1">Requiring credit notes / audit</div>
+          <div className="text-[11px] text-rose-400/80 mt-1">{t('metric.requiring_audit', 'Requiring credit notes / audit')}</div>
         </div>
 
         <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
@@ -285,7 +289,7 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
             <TrendingUp className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="text-2xl font-bold text-emerald-400">{reconciliationRate}%</div>
-          <div className="text-[11px] text-emerald-400/80 mt-1">Fulfilled to receiving partner</div>
+          <div className="text-[11px] text-emerald-400/80 mt-1">{t('metric.fulfilled_to_partner', 'Fulfilled to receiving partner')}</div>
         </div>
       </div>
 
@@ -299,14 +303,16 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-bold text-white flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 text-rose-400" />
-              Loss Categorization
+              {t('metric.loss_categorization', 'Loss Categorization')}
             </h2>
-            <span className="text-xs text-slate-400">Total: {totalItemsLost} units</span>
+            <span className="text-xs text-slate-400">
+              {t('table.units_lost', { count: totalItemsLost })}
+            </span>
           </div>
 
           {Object.keys(lossReasonBreakdown).length === 0 ? (
             <div className="p-6 text-center text-slate-500 text-xs">
-              No cargo losses or transit damages reported. Clean reconciliation record!
+              {t('analytics.zero_incidents', 'No cargo losses or transit damages reported. Clean reconciliation record!')}
             </div>
           ) : (
             <div className="space-y-3">
@@ -315,9 +321,11 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
                 return (
                   <div key={reason} className="space-y-1">
                     <div className="flex justify-between text-xs">
-                      <span className="text-slate-300 font-medium">{reason.replace(/_/g, ' ')}</span>
+                      <span className="text-slate-300 font-medium">
+                        {t('discrepancy.' + reason.toLowerCase(), reason.replace(/_/g, ' '))}
+                      </span>
                       <span className="text-slate-400 font-mono">
-                        {count} units ({percentage}%)
+                        {count} {t('unit.units', 'units')} ({percentage}%)
                       </span>
                     </div>
                     <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
@@ -338,13 +346,13 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-bold text-white flex items-center gap-2">
               <Users className="w-4 h-4 text-sky-400" />
-              Registered Receiving Partners ({partners.length})
+              {t('metric.registered_partners', 'Registered Receiving Partners')} ({partners.length})
             </h2>
             <button
               onClick={() => onNavigateTab('partners')}
               className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
             >
-              Manage Partners <ArrowRight className="w-3.5 h-3.5" />
+              {t('nav.partners', 'Manage Partners')} <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
@@ -355,15 +363,19 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
               return (
                 <div key={p.id} className="py-3 flex items-center justify-between text-xs">
                   <div>
-                    <div className="font-semibold text-white">{p.name}</div>
-                    <div className="text-slate-400 text-[11px]">{p.contactPerson} • {p.phone}</div>
+                    <div className="font-semibold text-white">{t(p.name)}</div>
+                    <div className="text-slate-400 text-[11px]">{t(p.contactPerson)} • {p.phone}</div>
                   </div>
                   <div className="text-right">
-                    <span className="font-mono text-slate-300">{partnerDispatches.length} dispatches</span>
+                    <span className="font-mono text-slate-300">
+                      {t('metric.dispatches_count', { count: partnerDispatches.length })}
+                    </span>
                     {partnerLosses > 0 ? (
-                      <span className="block text-[10px] text-rose-400 font-semibold">{partnerLosses} units lost</span>
+                      <span className="block text-[10px] text-rose-400 font-semibold">
+                        {t('table.units_lost', { count: partnerLosses })}
+                      </span>
                     ) : (
-                      <span className="block text-[10px] text-emerald-400">100% Intact</span>
+                      <span className="block text-[10px] text-emerald-400">{t('table.intact', '100% Intact')}</span>
                     )}
                   </div>
                 </div>
@@ -378,63 +390,72 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-bold text-white flex items-center gap-2">
             <Package className="w-4 h-4 text-indigo-400" />
-            Recent Outbound Dispatches
+            {t('metric.recent_dispatches', 'Recent Outbound Dispatches')}
           </h2>
           <button
             onClick={() => onNavigateTab('dispatches')}
             className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
           >
-            View All Dispatches <ArrowRight className="w-3.5 h-3.5" />
+            {t('action.view_all_dispatches', 'View All Dispatches')} <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
         <div className="overflow-x-auto rounded-xl border border-slate-800/80 scrollbar-thin">
-          <table className="w-full text-left text-xs min-w-[760px] lg:min-w-full">
+          <table className="w-full text-left text-xs min-w-[700px] sm:min-w-[740px] lg:min-w-full">
             <thead className="text-[11px] uppercase tracking-wider text-slate-400 bg-slate-950/40 border-b border-slate-800">
               <tr>
-                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">Dispatch Number</th>
-                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">Partner Destination</th>
-                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">Status</th>
-                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">Items</th>
-                <th className="px-3 sm:px-3.5 py-3 font-semibold whitespace-nowrap">Reconciliation Outcome</th>
-                <th className="px-3 sm:px-3.5 py-3 font-semibold text-right whitespace-nowrap">{t('table.action', 'Action')}</th>
+                <th className="px-2.5 sm:px-3.5 py-3 font-semibold whitespace-nowrap">{t('table.dispatch_number', 'Dispatch Number')}</th>
+                <th className="px-2.5 sm:px-3.5 py-3 font-semibold whitespace-nowrap">{t('table.destination_partner', 'Partner Destination')}</th>
+                <th className="px-2.5 sm:px-3.5 py-3 font-semibold whitespace-nowrap">{t('table.status', 'Status')}</th>
+                <th className="px-2.5 sm:px-3.5 py-3 font-semibold whitespace-nowrap">{t('table.items', 'Items')}</th>
+                <th className="px-2.5 sm:px-3.5 py-3 font-semibold whitespace-nowrap">{t('table.recon_outcome', 'Reconciliation Outcome')}</th>
+                <th className="px-2.5 sm:px-3.5 py-3 font-semibold text-right whitespace-nowrap">{t('table.action', 'Action')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
               {dispatches.slice(0, 5).map((d) => (
                 <tr key={d.id} className="hover:bg-slate-800/40 transition-colors">
-                  <td className="px-3 py-3 font-mono font-semibold text-indigo-300 whitespace-nowrap">{d.dispatchNumber}</td>
-                  <td className="px-3 py-3 text-slate-200">
-                    <div className="font-medium">{d.partnerName}</div>
-                    <div className="text-[11px] text-slate-500 truncate max-w-xs">{d.destinationSnapshot.address}</div>
+                  <td className="px-2.5 sm:px-3 py-3 font-mono font-semibold text-indigo-300 whitespace-nowrap">
+                    <button
+                      onClick={() => onSelectDispatch(d.id)}
+                      className="hover:underline text-indigo-300 hover:text-indigo-200 cursor-pointer text-left"
+                      title={t('action.details', 'View dispatch details')}
+                    >
+                      {d.dispatchNumber}
+                    </button>
                   </td>
-                  <td className="px-3 py-3 whitespace-nowrap">
+                  <td className="px-2.5 sm:px-3 py-3 text-slate-200">
+                    <div className="font-medium">{t(d.partnerName)}</div>
+                    <div className="text-[11px] text-slate-500 truncate max-w-xs">{t(d.destinationSnapshot.address)}</div>
+                  </td>
+                  <td className="px-2.5 sm:px-3 py-3 whitespace-nowrap">
                     <StatusBadge status={d.status} size="sm" />
                   </td>
-                  <td className="px-3 py-3 text-slate-300 whitespace-nowrap">
-                    {d.totalQuantityDispatched} {d.lines[0]?.unit || 'units'}
+                  <td className="px-2.5 sm:px-3 py-3 text-slate-300 whitespace-nowrap">
+                    {d.totalQuantityDispatched}{' '}
+                    {d.lines[0]?.unit ? t('unit.' + d.lines[0].unit.toLowerCase(), d.lines[0].unit) : t('unit.units', 'units')}
                   </td>
-                  <td className="px-3 py-3 whitespace-nowrap">
+                  <td className="px-2.5 sm:px-3 py-3 whitespace-nowrap">
                     {d.totalQuantityLost !== undefined ? (
                       d.totalQuantityLost > 0 ? (
                         <span className="text-rose-400 font-semibold flex items-center gap-1">
                           <AlertTriangle className="w-3.5 h-3.5" />
-                          {t('status.shortfall_damage', 'Shortfall')}: {d.totalQuantityLost}
+                          {t('table.shortfall_units', { count: d.totalQuantityLost })}
                         </span>
                       ) : (
                         <span className="text-emerald-400 font-medium flex items-center gap-1">
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          {t('status.reconciled', 'Reconciled (100%)')}
+                          {t('recon.reconciled_100', 'Reconciled (100%)')}
                         </span>
                       )
                     ) : (
-                      <span className="text-slate-500">{t('status.dispatched', 'In Transit / Pending')}</span>
+                      <span className="text-slate-500">{t('status.pending_receipt', 'Pending Receipt')}</span>
                     )}
                   </td>
-                  <td className="px-3 py-3 text-right whitespace-nowrap">
+                  <td className="px-2.5 sm:px-3 py-3 text-right whitespace-nowrap">
                     <button
                       onClick={() => onSelectDispatch(d.id)}
-                      className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium cursor-pointer"
+                      className="px-3 py-2 min-h-[40px] rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium cursor-pointer inline-flex items-center justify-center"
                     >
                       {t('action.details', 'Details')}
                     </button>
@@ -453,8 +474,8 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
             <button
               onClick={() => setShowCreateBizModal(false)}
               className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
-              title="Close modal"
-              aria-label="Close modal"
+              title={t('action.close', 'Close')}
+              aria-label={t('action.close', 'Close')}
             >
               <X className="w-5 h-5" />
             </button>
@@ -464,8 +485,8 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
                 <Building2 className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white">Register New Business Entity</h3>
-                <p className="text-xs text-slate-400">Add an operating entity under your multi-tenant account</p>
+                <h3 className="text-lg font-bold text-white">{t('auth.register_title', 'Register New Business Entity')}</h3>
+                <p className="text-xs text-slate-400">{t('auth.add_entity_desc', 'Add an operating entity under your multi-tenant account')}</p>
               </div>
             </div>
 
@@ -479,12 +500,12 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
             <form onSubmit={handleCreateBusinessSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Business Legal Name <span className="text-rose-400">*</span>
+                  {t('auth.biz_legal_name', 'Business Legal Name')} <span className="text-rose-400">*</span>
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Great Lakes Cold Freight Ltd."
+                  placeholder={t('biz.placeholder_name', 'e.g. Great Lakes Cold Freight Ltd.')}
                   value={bizForm.name}
                   onChange={(e) => setBizForm({ ...bizForm, name: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
@@ -494,11 +515,11 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Registration / Tax ID
+                    {t('auth.tax_id', 'Registration / Tax ID')}
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. REG-88421-US"
+                    placeholder={t('biz.placeholder_tax_id', 'e.g. REG-88421-US')}
                     value={bizForm.registrationNumber}
                     onChange={(e) => setBizForm({ ...bizForm, registrationNumber: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
@@ -506,7 +527,7 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Country Code
+                    {t('auth.country_code', 'Country Code')}
                   </label>
                   <input
                     type="text"
@@ -521,12 +542,12 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Contact Email <span className="text-rose-400">*</span>
+                    {t('auth.email_address', 'Contact Email')} <span className="text-rose-400">*</span>
                   </label>
                   <input
                     type="email"
                     required
-                    placeholder="ops@company.com"
+                    placeholder={t('biz.placeholder_email', 'ops@company.com')}
                     value={bizForm.contactEmail}
                     onChange={(e) => setBizForm({ ...bizForm, contactEmail: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
@@ -534,12 +555,12 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Dispatch Phone <span className="text-rose-400">*</span>
+                    {t('auth.mobile_phone', 'Dispatch Phone')} <span className="text-rose-400">*</span>
                   </label>
                   <input
                     type="tel"
                     required
-                    placeholder="+1-555-019-0000"
+                    placeholder={t('biz.placeholder_phone', '+1-555-019-0000')}
                     value={bizForm.contactPhone}
                     onChange={(e) => setBizForm({ ...bizForm, contactPhone: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
@@ -549,12 +570,12 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Operating Headquarters Address <span className="text-rose-400">*</span>
+                  {t('table.address', 'Operating Headquarters Address')} <span className="text-rose-400">*</span>
                 </label>
                 <textarea
                   required
                   rows={2}
-                  placeholder="e.g. 500 Industrial Parkway, Dock 1, Milwaukee, WI 53202"
+                  placeholder={t('biz.placeholder_address', 'e.g. 500 Industrial Parkway, Dock 1, Milwaukee, WI 53202')}
                   value={bizForm.address}
                   onChange={(e) => setBizForm({ ...bizForm, address: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors resize-none"
@@ -567,7 +588,7 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
                   onClick={() => setShowCreateBizModal(false)}
                   className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
                 >
-                  Cancel
+                  {t('action.cancel', 'Cancel')}
                 </button>
                 <button
                   type="submit"
@@ -577,12 +598,12 @@ export const BusinessOwnerDashboard: React.FC<BusinessOwnerDashboardProps> = ({
                   {submittingBiz ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Registering...</span>
+                      <span>{t('auth.submitting', 'Registering...')}</span>
                     </>
                   ) : (
                     <>
                       <Plus className="w-3.5 h-3.5" />
-                      <span>Register & Activate</span>
+                      <span>{t('auth.complete_enrollment', 'Register & Activate')}</span>
                     </>
                   )}
                 </button>
